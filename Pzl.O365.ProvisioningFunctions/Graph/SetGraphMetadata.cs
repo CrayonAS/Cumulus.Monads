@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Dynamic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http.Description;
@@ -19,6 +21,19 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 {
     public static class SetGraphMetadata
     {
+        public static string GetLabel(MetadataField metadataField)
+        {
+            MemberInfo memberInfo = typeof(MetadataField).GetMember(metadataField.ToString())
+                .FirstOrDefault();
+
+            if (memberInfo == null) return null;
+
+            DisplayAttribute attribute = (DisplayAttribute)
+                memberInfo.GetCustomAttributes(typeof(DisplayAttribute), false)
+                    .Single();
+            return attribute.Name;
+        }
+
         [FunctionName("SetGraphMetadata")]
         [ResponseType(typeof(SetGraphMetadataResponse))]
         [Display(Name = "Set Office 365 Group metadata", Description = "Store metadata for the Office 365 Group in the Microsoft Graph")]
@@ -26,14 +41,18 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             try
             {
-                string extensionName = await SchemaExtensionHelper.GetExtensionName(ConnectADAL.AppId);
-                if (string.IsNullOrWhiteSpace(extensionName))
-                {
-                    throw new Exception($"{extensionName} not found");
-                }
+                const string extensionName = "techmikael_GenericSchema";
+
+                string schemaKey = PropertyMapper[request.Key];
+                string schemaLabel = schemaKey.Replace("Key", "Label");
+                string schemaValue = schemaKey.Replace("Key", "Value");
+                string label = GetLabel(request.Key);
 
                 dynamic property = new ExpandoObject();
-                ((IDictionary<string, object>)property).Add(request.Key.ToString(), request.Value);
+                ((IDictionary<string, object>)property).Add(schemaKey, request.Key.ToString());
+                ((IDictionary<string, object>)property).Add(schemaLabel, label);
+                ((IDictionary<string, object>)property).Add(schemaValue, request.Value);
+                
                 dynamic template = new ExpandoObject();
                 ((IDictionary<string, object>)template).Add(extensionName, property);
 
@@ -68,12 +87,21 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             }
         }
 
+        private static readonly Dictionary<MetadataField, string> PropertyMapper =
+            new Dictionary<MetadataField, string>() { { MetadataField.GroupType, "KeyString00" },
+                { MetadataField.Responsible, "KeyString01" },
+                { MetadataField.StartDate, "KeyDateTime00" },
+                { MetadataField.EndDate, "KeyDateTime01" } };
 
-        public enum MetadataFields
+        public enum MetadataField
         {
+            [Display(Name = "Type of Office 365 Group")]
             GroupType = 0,
+            [Display(Name = "Ansvarlig for arbeidsrom")]
             Responsible = 1,
+            [Display(Name = "Oppstartsdato")]
             StartDate = 2,
+            [Display(Name = "Forventet sluttdato")]
             EndDate = 3
         }
 
@@ -85,7 +113,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
             [Required]
             [Display(Description = "Metadata name. Valid values are: groupType / responsible")]
-            public MetadataFields Key { get; set; }
+            public MetadataField Key { get; set; }
 
             [Required]
             [Display(Description = "Metadata value")]
