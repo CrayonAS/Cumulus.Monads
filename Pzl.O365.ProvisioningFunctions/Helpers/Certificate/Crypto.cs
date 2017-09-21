@@ -47,17 +47,10 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers.Certificate
                 // The data following the version will be the ASN.1 data itself, which in our case
                 // are a sequence of integers.
 
-                // In order to solve a problem with instancing RSACryptoServiceProvider
-                // via default constructor on .net 4.0 this is a hack
                 var parms = new CspParameters
                 {
-                    Flags = CspProviderFlags.NoFlags,
-                    KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant(),
-                    ProviderType = Environment.OSVersion.Version.Major > 5 ||
-                                   Environment.OSVersion.Version.Major == 5 &&
-                                   Environment.OSVersion.Version.Minor >= 1
-                        ? 0x18
-                        : 1
+                    Flags = CspProviderFlags.UseMachineKeyStore,
+                    KeyContainerName = Guid.NewGuid().ToString().ToUpperInvariant()
                 };
 
                 var rsa = new RSACryptoServiceProvider(parms);
@@ -83,7 +76,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers.Certificate
                 rsa.ImportParameters(rsAparams);
                 return rsa;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 return null;
             }
