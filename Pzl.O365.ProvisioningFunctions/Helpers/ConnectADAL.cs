@@ -21,7 +21,6 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
         private static readonly string ADALDomain = Environment.GetEnvironmentVariable("ADALDomain");
         private static readonly Dictionary<string, ADAL.AuthenticationResult> ResourceTokenLookup = new Dictionary<string, ADAL.AuthenticationResult>();
 
-
         private static async Task<string> GetAccessToken(string AADDomain)
         {
             ADAL.AuthenticationResult token;
