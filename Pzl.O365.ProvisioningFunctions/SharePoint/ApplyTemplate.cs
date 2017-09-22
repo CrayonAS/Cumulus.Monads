@@ -25,7 +25,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
     {
         static ApplyTemplate()
         {
-            RedirectAssembly();
+            //RedirectAssembly();
         }
 
         [FunctionName("ApplyTemplate")]
