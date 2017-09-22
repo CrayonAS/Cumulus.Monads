@@ -1,9 +1,11 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
@@ -11,6 +13,7 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.SharePoint.Client;
 using OfficeDevPnP.Core.Framework.Provisioning.Connectors;
+using OfficeDevPnP.Core.Framework.Provisioning.Model;
 using OfficeDevPnP.Core.Framework.Provisioning.ObjectHandlers;
 using OfficeDevPnP.Core.Framework.Provisioning.Providers;
 using OfficeDevPnP.Core.Framework.Provisioning.Providers.Xml;
@@ -20,13 +23,18 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 {
     public static class ApplyTemplate
     {
+        static ApplyTemplate()
+        {
+            RedirectAssembly();
+        }
+
         [FunctionName("ApplyTemplate")]
         [ResponseType(typeof(ApplyTemplateResponse))]
         [Display(Name = "Apply PnP template to site", Description = "Apply a PnP template to the site.")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]ApplyTemplateRequest request, TraceWriter log)
         {
             string siteUrl = request.SiteURL;
-
+            RedirectAssembly();
             try
             {
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
@@ -46,22 +54,27 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 templateFileName = templateFileName.Substring(0, templateFileName.LastIndexOf(".", StringComparison.Ordinal)) + ".xml";
                 var provisioningTemplate = provider.GetTemplate(templateFileName, new ITemplateProviderExtension[0]);
 
-                provisioningTemplate.Connector = provider.Connector;
-
-                ProvisioningTemplateApplyingInformation applyingInformation = new ProvisioningTemplateApplyingInformation()
-                {
-                    ProgressDelegate = (message, progress, total) => {
-                        log.Info(String.Format("{0:00}/{1:00} - {2}", progress, total, message));
-                    },
-                    MessagesDelegate = (message, messageType) => {
-                        log.Info(String.Format("{0} - {1}", messageType, message));
-                    }
-                };
-
                 foreach (var parameter in request.Parameters)
                 {
                     provisioningTemplate.Parameters[parameter.Key] = parameter.Value;
                 }
+
+                ResolveListWebParts(provisioningTemplate, clientContext.Web);
+
+                provisioningTemplate.Connector = provider.Connector;
+
+                ProvisioningTemplateApplyingInformation applyingInformation = new ProvisioningTemplateApplyingInformation()
+                {
+                    ProgressDelegate = (message, progress, total) =>
+                    {
+                        log.Info(String.Format("{0:00}/{1:00} - {2}", progress, total, message));
+                    },
+                    MessagesDelegate = (message, messageType) =>
+                    {
+                        log.Info(String.Format("{0} - {1}", messageType, message));
+                    }
+                };
+
 
                 clientContext.Web.ApplyProvisioningTemplate(provisioningTemplate, applyingInformation);
 
@@ -73,12 +86,49 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             }
             catch (Exception e)
             {
-                log.Error($"Error: {e.Message }\n\n{e.StackTrace}");
+                log.Error($"Error: {e.Message}\n\n{e.StackTrace}");
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
             }
+        }
+
+        private static void ResolveListWebParts(ProvisioningTemplate provisioningTemplate, Web web)
+        {
+            // List patch until PnP is updated
+            if (provisioningTemplate.ClientSidePages == null) return;
+            var tokenParser = new TokenParser(web, provisioningTemplate);
+            foreach (var page in provisioningTemplate.ClientSidePages)
+            {
+                foreach (var section in page.Sections)
+                {
+                    foreach (var control in section.Controls)
+                    {
+                        control.JsonControlData = tokenParser.ParseString(control.JsonControlData);
+                        if (control.Type != WebPartType.List) continue;
+                        ListResolver resolver = new ListResolver(control, web);
+                        resolver.Process();
+                    }
+                }
+            }
+        }
+
+        public static void RedirectAssembly()
+        {
+            var list = AppDomain.CurrentDomain.GetAssemblies().OrderByDescending(a => a.FullName).Select(a => a.FullName).ToList();
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            {
+                var requestedAssembly = new AssemblyName(args.Name);
+                foreach (string asmName in list)
+                {
+                    if (asmName.StartsWith(requestedAssembly.Name + ","))
+                    {
+                        return Assembly.Load(asmName);
+                    }
+                }
+                return null;
+            };
         }
 
         public class ApplyTemplateRequest
