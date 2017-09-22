@@ -76,10 +76,10 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers.Certificate
                 rsa.ImportParameters(rsAparams);
                 return rsa;
             }
-            catch (Exception e)
-            {
-                return null;
-            }
+            //catch (Exception e)
+            //{
+            //    return null;
+            //}
             finally
             {
                 rd.Close();
