@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.SharePoint.Client;
 using ADAL = Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Graph;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Pzl.O365.ProvisioningFunctions.Helpers
 {
@@ -20,6 +24,14 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
         private static readonly string AppCertKey = Environment.GetEnvironmentVariable("ADALAppCertificateKey");
         private static readonly string ADALDomain = Environment.GetEnvironmentVariable("ADALDomain");
         private static readonly Dictionary<string, ADAL.AuthenticationResult> ResourceTokenLookup = new Dictionary<string, ADAL.AuthenticationResult>();
+        private static readonly string MsiEndpoint = Environment.GetEnvironmentVariable("MSI_ENDPOINT");
+        private static readonly string MsiSecret = Environment.GetEnvironmentVariable("MSI_SECRET");
+
+        public class MsiInformation
+        {
+            public string OwnerId { get; set; }
+            public string BearerToken { get; set; }
+        }
 
         private static async Task<string> GetAccessToken(string AADDomain)
         {
@@ -72,13 +84,57 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             return client;
         }
 
+        public static GraphServiceClient GetGraphClientServiceIdentity(TraceWriter log)
+        {
+            GraphServiceClient client = new GraphServiceClient(new DelegateAuthenticationProvider(
+                async (requestMessage) =>
+                {
+                    var info = await GetBearerTokenServiceIdentity(log);
+                    log.Info("Bearer: " + info.BearerToken);
+                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", info.BearerToken);
+                }));
+            return client;
+        }
+
         public static async Task<string> GetBearerToken()
         {
             string accessToken = await GetAccessToken(ADALDomain);
             return accessToken;
         }
 
+        public static async Task<MsiInformation> GetBearerTokenServiceIdentity(TraceWriter log)
+        {
+            string apiVersion = "2017-09-01";
+            string tokenAuthUri = MsiEndpoint + $"?resource={GraphResourceId}&api-version={apiVersion}";
+            log.Info(tokenAuthUri);
+            HttpClient client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Secret", MsiSecret);
 
+            var response = await client.GetAsync(tokenAuthUri);
+            if (response.IsSuccessStatusCode)
+            {
+                string responseMsg = await response.Content.ReadAsStringAsync();
+                dynamic token = JsonConvert.DeserializeObject(responseMsg);
+                string bearer = token.access_token;
+
+                var parts = bearer.Split('.');
+                var decoded = Convert.FromBase64String(parts[1]);
+                var part = Encoding.UTF8.GetString(decoded);
+                var jwt = JObject.Parse(part);
+                var ownerId = jwt["oid"].Value<string>();
+
+                MsiInformation info = new MsiInformation
+                {
+                    OwnerId = ownerId,
+                    BearerToken = bearer
+                };
+                log.Info("Got token: " + bearer);
+                return info;
+            }
+            log.Info("No token");
+            return null;
+        }
 
         private static ADAL.ClientAssertionCertificate GetClientAssertionCertificate()
         {
