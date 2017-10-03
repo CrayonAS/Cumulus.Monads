@@ -26,7 +26,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
         [Display(Name = "Set color theme for the site", Description = "Define a color scheme for the site based off a base color.")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]SetSiteColorRequest request, TraceWriter log)
         {
-            if (!request.RGB.StartsWith("#")) request.RGB += "#";
+            if (!request.RGB.StartsWith("#")) request.RGB = "#" + request.RGB;
             if (request.RGB.Length != 7 && request.RGB.Length != 4)
             {
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway)
