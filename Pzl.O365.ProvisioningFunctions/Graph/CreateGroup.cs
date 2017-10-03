@@ -93,7 +93,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Required]
             public string Description { get; set; }
             [Required]
-            [Display(Description = "Samhandling / Prosjekt")]
+            [Display(Description = "Samhandling / Prosjekt / Ekstranett")]
             public string Type { get; set; }
             [Required]
             public string Responsible { get; set; }
