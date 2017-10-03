@@ -13,7 +13,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
     public static class AllowExternalMembersInGroup
     {
         [FunctionName("AllowExternalMembersInGroup")]
-        [Display(Name = "Enable/disable invitation of external members", Description = "Allow or disallow invitation of external members to the Office 365 Group")]
+        [Display(Name = "Enable or disable invitation of external members", Description = "Allow or disallow invitation of external members to the Office 365 Group")]
         public static async Task<AllowExternalMembersInGroupResponse> Run([HttpTrigger(AuthorizationLevel.Function, "post")]AllowExternalMembersInGroupRequest request, TraceWriter log)
         {
             GraphServiceClient client = ConnectADAL.GetGraphClient();
