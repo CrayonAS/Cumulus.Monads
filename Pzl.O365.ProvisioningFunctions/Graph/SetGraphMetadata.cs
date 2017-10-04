@@ -112,7 +112,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             public string GroupId { get; set; }
 
             [Required]
-            [Display(Description = "Metadata name. Valid values are: groupType / responsible")]
+            [Display(Description = "Metadata name")]
             public MetadataField Key { get; set; }
 
             [Required]
