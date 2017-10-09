@@ -81,11 +81,6 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             return mailNickname;
         }
 
-        public enum ProjectTypes
-        {
-            Samhandling = 0,
-            Prosjekt = 0
-        }
         public class CreateGroupRequest
         {
             [Required]
