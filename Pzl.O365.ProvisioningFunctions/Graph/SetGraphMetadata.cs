@@ -95,7 +95,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         public enum MetadataField
         {
-            [Display(Name = "Type of Office 365 Group")]
+            [Display(Name = "Type arbeidsrom")]
             GroupType = 0,
             [Display(Name = "Ansvarlig for arbeidsrom")]
             Responsible = 1,
@@ -119,11 +119,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Metadata value")]
             public string Value { get; set; }
         }
-    }
 
-    public class SetGraphMetadataResponse
-    {
-        [Display(Description = "true/false if added")]
-        public bool Added { get; set; }
+        public class SetGraphMetadataResponse
+        {
+            [Display(Description = "true/false if added")]
+            public bool Added { get; set; }
+        }
     }
 }
