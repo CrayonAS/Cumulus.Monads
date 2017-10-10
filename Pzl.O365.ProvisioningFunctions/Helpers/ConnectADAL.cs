@@ -4,11 +4,11 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Microsoft.SharePoint.Client;
-using ADAL = Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Graph;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -23,7 +23,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
         private static readonly string AppCert = Environment.GetEnvironmentVariable("ADALAppCertificate");
         private static readonly string AppCertKey = Environment.GetEnvironmentVariable("ADALAppCertificateKey");
         private static readonly string ADALDomain = Environment.GetEnvironmentVariable("ADALDomain");
-        private static readonly Dictionary<string, ADAL.AuthenticationResult> ResourceTokenLookup = new Dictionary<string, ADAL.AuthenticationResult>();
+        private static readonly Dictionary<string, AuthenticationResult> ResourceTokenLookup = new Dictionary<string, AuthenticationResult>();
         private static readonly string MsiEndpoint = Environment.GetEnvironmentVariable("MSI_ENDPOINT");
         private static readonly string MsiSecret = Environment.GetEnvironmentVariable("MSI_SECRET");
 
@@ -35,14 +35,13 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
 
         private static async Task<string> GetAccessToken(string AADDomain)
         {
-            ADAL.AuthenticationResult token;
+            AuthenticationResult token;
             if (!ResourceTokenLookup.TryGetValue(GraphResourceId, out token) || token.ExpiresOn.UtcDateTime < DateTime.UtcNow)
             {
-                var authenticationContext = new ADAL.AuthenticationContext(ADALLogin + AADDomain);
-                var clientCredential = new ADAL.ClientCredential(AppId, AppSecret);
+                var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
+                var clientCredential = new ClientCredential(AppId, AppSecret);
 
                 //var url = await authenticationContext.GetAuthorizationRequestUrlAsync(resourceUri, AppId, new Uri("https://techmikael.sharepoint.com/o365"), ADAL.UserIdentifier.AnyUser, "prompt=admin_consent");
-
                 token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
                 ResourceTokenLookup[GraphResourceId] = token;
             }
@@ -52,7 +51,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
         private static async Task<string> GetAccessTokenSharePoint(string AADDomain, string siteUrl, TraceWriter log = null)
         {
             //https://blogs.msdn.microsoft.com/richard_dizeregas_blog/2015/05/03/performing-app-only-operations-on-sharepoint-online-through-azure-ad/
-            ADAL.AuthenticationResult token;
+            AuthenticationResult token;
             Uri uri = new Uri(siteUrl);
             string resourceUri = uri.Scheme + "://" + uri.Authority;
             if (!ResourceTokenLookup.TryGetValue(resourceUri, out token) || token.ExpiresOn.UtcDateTime < DateTime.UtcNow)
@@ -63,7 +62,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
                 }
 
                 var cac = GetClientAssertionCertificate();
-                var authenticationContext = new ADAL.AuthenticationContext(ADALLogin + AADDomain);
+                var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
                 token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
                 ResourceTokenLookup[resourceUri] = token;
 
@@ -136,11 +135,11 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             return null;
         }
 
-        private static ADAL.ClientAssertionCertificate GetClientAssertionCertificate()
+        private static ClientAssertionCertificate GetClientAssertionCertificate()
         {
             var generator = new Certificate.Certificate(AppCert, AppCertKey, "");
             X509Certificate2 cert = generator.GetCertificateFromPEMstring(false);
-            ADAL.ClientAssertionCertificate cac = new ADAL.ClientAssertionCertificate(AppId, cert);
+            ClientAssertionCertificate cac = new ClientAssertionCertificate(AppId, cert);
             return cac;
         }
 
