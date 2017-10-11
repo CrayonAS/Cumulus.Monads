@@ -54,9 +54,12 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 templateFileName = templateFileName.Substring(0, templateFileName.LastIndexOf(".", StringComparison.Ordinal)) + ".xml";
                 var provisioningTemplate = provider.GetTemplate(templateFileName, new ITemplateProviderExtension[0]);
 
-                foreach (var parameter in request.Parameters)
+                if (request.Parameters != null)
                 {
-                    provisioningTemplate.Parameters[parameter.Key] = parameter.Value;
+                    foreach (var parameter in request.Parameters)
+                    {
+                        provisioningTemplate.Parameters[parameter.Key] = parameter.Value;
+                    }
                 }
 
                 ResolveListWebParts(provisioningTemplate, clientContext.Web);
