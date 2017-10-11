@@ -77,7 +77,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             catch (Exception e)
             {
                 log.Error($"Error:  {e.Message }\n\n{e.StackTrace}");
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });

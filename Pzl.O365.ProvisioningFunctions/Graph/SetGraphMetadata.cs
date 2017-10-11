@@ -71,7 +71,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 }
                 string responseMsg = await response.Content.ReadAsStringAsync();
                 dynamic errorMsg = JsonConvert.DeserializeObject(responseMsg);
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
                     Content = new ObjectContent<object>(errorMsg, new JsonMediaTypeFormatter())
                 });
@@ -80,7 +80,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             catch (Exception e)
             {
                 log.Error(e.Message);
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
