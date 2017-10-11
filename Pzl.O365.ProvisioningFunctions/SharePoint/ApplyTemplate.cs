@@ -37,6 +37,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             RedirectAssembly();
             try
             {
+                request.TemplateURL = request.TemplateURL.Trim(); // remove potential spaces/line breaks
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
                 Uri fileUri = new Uri(request.TemplateURL);
