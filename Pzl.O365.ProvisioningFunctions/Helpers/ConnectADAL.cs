@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.SharePoint.Client;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Graph;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
@@ -41,8 +42,46 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
                 var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
                 var clientCredential = new ClientCredential(AppId, AppSecret);
 
+                bool keepRetry = false;
+                do
+                {
+                    TimeSpan? delay = null;
+                    try
+                    {
+                        token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
+
+                        AdalServiceException serviceException;
+                        if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
+                        else serviceException = (AdalServiceException)ex.InnerException;
+                        if (serviceException.ErrorCode == "temporarily_unavailable")
+                        {
+                            RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
+                            if (retry.Delta.HasValue)
+                            {
+                                delay = retry.Delta;
+                            }
+                            else if (retry.Date.HasValue)
+                            {
+                                delay = retry.Date.Value.Offset;
+                            }
+                            if (delay.HasValue)
+                            {
+                                Thread.Sleep((int) delay.Value.TotalSeconds); // sleep or other
+                                keepRetry = true;
+                            }
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                } while (keepRetry);
+
                 //var url = await authenticationContext.GetAuthorizationRequestUrlAsync(resourceUri, AppId, new Uri("https://techmikael.sharepoint.com/o365"), ADAL.UserIdentifier.AnyUser, "prompt=admin_consent");
-                token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
                 ResourceTokenLookup[GraphResourceId] = token;
             }
             return token.AccessToken;
@@ -63,7 +102,47 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
 
                 var cac = GetClientAssertionCertificate();
                 var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
-                token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
+
+                bool keepRetry = false;
+                do
+                {
+                    TimeSpan? delay = null;
+                    try
+                    {
+                        token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
+
+                        AdalServiceException serviceException;
+                        if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
+                        else serviceException = (AdalServiceException)ex.InnerException;
+                        if (serviceException.ErrorCode == "temporarily_unavailable")
+                        {
+                            RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
+                            if (retry.Delta.HasValue)
+                            {
+                                delay = retry.Delta;
+                            }
+                            else if (retry.Date.HasValue)
+                            {
+                                delay = retry.Date.Value.Offset;
+                            }
+                            if (delay.HasValue)
+                            {
+                                Thread.Sleep((int)delay.Value.TotalSeconds); // sleep or other
+                                keepRetry = true;
+                            }
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                } while (keepRetry);
+
+                //token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
                 ResourceTokenLookup[resourceUri] = token;
 
                 log?.Info($"Aquired token which expires {token.ExpiresOn.UtcDateTime}");
