@@ -17,7 +17,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
     {
         [FunctionName("PublishFile")]
         [ResponseType(typeof(PublishFileResponse))]
-        [Display(Name = "Publish a file SharePoint file", Description = "Make sure a file is published as a major version.")]
+        [Display(Name = "Publish a SharePoint file", Description = "Make sure a file is published as a major version.")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]PublishFileRequest request, TraceWriter log)
         {
             string fileName = System.IO.Path.GetFileName(request.FileURL);
