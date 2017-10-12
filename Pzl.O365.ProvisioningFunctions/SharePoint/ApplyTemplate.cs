@@ -23,10 +23,10 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 {
     public static class ApplyTemplate
     {
-        static ApplyTemplate()
-        {
-            //RedirectAssembly();
-        }
+        //static ApplyTemplate()
+        //{
+        //    RedirectAssembly();
+        //}
 
         [FunctionName("ApplyTemplate")]
         [ResponseType(typeof(ApplyTemplateResponse))]
@@ -78,10 +78,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                         log.Info(String.Format("{0} - {1}", messageType, message));
                     }
                 };
-
-
+                
                 clientContext.Web.ApplyProvisioningTemplate(provisioningTemplate, applyingInformation);
-
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
