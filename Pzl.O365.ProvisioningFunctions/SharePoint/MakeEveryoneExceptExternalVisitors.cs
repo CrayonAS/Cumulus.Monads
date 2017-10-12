@@ -24,32 +24,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
-                var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
-                string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
-                bool moved = false;
-
-                var web = clientContext.Web;
-                clientContext.Load(web.SiteUsers);
-                clientContext.ExecuteQueryRetry();
-                foreach (User user in web.SiteUsers)
-                {
-                    if (user.LoginName.StartsWith(everyoneIdent))
-                    {
-                        var membersGroup = web.AssociatedMemberGroup;
-                        clientContext.Load(membersGroup);
-                        clientContext.ExecuteQueryRetry();
-
-                        if (web.IsUserInGroup(membersGroup.Title, user.LoginName ))
-                        {
-                            web.RemoveUserFromGroup(membersGroup, user);
-                            var visitorsGroup = web.AssociatedVisitorGroup;
-                            web.AddUserToGroup(visitorsGroup, user);
-                            moved = true;
-                        }
-                        break;
-                    }
-                }
-                
+                System.Threading.Thread.Sleep(30000); // pause 30 seconds to give it some time
+                bool moved = await MoveEveryoneUser(log, siteUrl);
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -64,6 +40,36 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
             }
+        }
+
+        private static async Task<bool> MoveEveryoneUser(TraceWriter log, string siteUrl)
+        {
+            var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
+            const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
+            bool moved = false;
+
+            var web = clientContext.Web;
+            var membersGroup = web.AssociatedMemberGroup;
+            var siteUsers = web.SiteUsers;
+            var visitorsGroup = web.AssociatedVisitorGroup;
+
+            clientContext.Load(siteUsers);
+            clientContext.Load(membersGroup);
+            clientContext.Load(visitorsGroup);
+            clientContext.ExecuteQueryRetry();
+            foreach (User user in siteUsers)
+            {
+                if (!user.LoginName.StartsWith(everyoneIdent)) continue;
+
+                if (web.IsUserInGroup(membersGroup.Title, user.LoginName))
+                {
+                    web.RemoveUserFromGroup(membersGroup, user);
+                    web.AddUserToGroup(visitorsGroup, user);
+                    moved = true;
+                }
+                break;
+            }
+            return moved;
         }
 
         public class MakeEveryoneExceptExternalVisitorsRequest
