@@ -36,6 +36,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, fileUri);
             var fileContext = clientContext.Clone(webUrl.ToString());
 
+            bool published = false;
             try
             {
                 var file = fileContext.Web.GetFileByUrl(request.FileURL);
@@ -47,6 +48,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 }
                 if (file.MinorVersion != 0)
                 {
+                    published = true;
                     file.CheckOut();
                     file.CheckIn("Publish major version", CheckinType.MajorCheckIn);
                 }
@@ -54,7 +56,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<PublishFileResponse>(new PublishFileResponse { Published = true }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<PublishFileResponse>(new PublishFileResponse { Published = published }, new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
