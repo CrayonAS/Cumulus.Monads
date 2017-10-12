@@ -63,8 +63,6 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     }
                 }
 
-                ResolveListWebParts(provisioningTemplate, clientContext.Web);
-
                 provisioningTemplate.Connector = provider.Connector;
 
                 ProvisioningTemplateApplyingInformation applyingInformation = new ProvisioningTemplateApplyingInformation()
@@ -93,26 +91,6 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
-            }
-        }
-
-        private static void ResolveListWebParts(ProvisioningTemplate provisioningTemplate, Web web)
-        {
-            // List patch until PnP is updated
-            if (provisioningTemplate.ClientSidePages == null) return;
-            var tokenParser = new TokenParser(web, provisioningTemplate);
-            foreach (var page in provisioningTemplate.ClientSidePages)
-            {
-                foreach (var section in page.Sections)
-                {
-                    foreach (var control in section.Controls)
-                    {
-                        control.JsonControlData = tokenParser.ParseString(control.JsonControlData);
-                        if (control.Type != WebPartType.List) continue;
-                        ListResolver resolver = new ListResolver(control, web);
-                        resolver.Process();
-                    }
-                }
             }
         }
 
