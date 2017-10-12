@@ -45,9 +45,11 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 {
                     file.UndoCheckOut();
                 }
-
-                file.CheckOut();
-                file.CheckIn("Updated", CheckinType.MajorCheckIn);
+                if (file.MinorVersion != 0)
+                {
+                    file.CheckOut();
+                    file.CheckIn("Publish major version", CheckinType.MajorCheckIn);
+                }
                 fileContext.ExecuteQueryRetry();
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
