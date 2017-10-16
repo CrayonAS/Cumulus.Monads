@@ -83,7 +83,6 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Metadata key. E.g.: KeyString00")]
             public string Key { get; set; }
 
-            [Required]
             [Display(Description = "Metadata label. E.g.: LabelString00")]
             public string Label { get; set; }
 
