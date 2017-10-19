@@ -35,9 +35,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var clientContext = await ConnectADAL.GetClientContext(adminUrl, log);
 
                 Tenant tenant = new Tenant(clientContext);
-                var site = tenant.GetSitePropertiesByUrl(siteUrl, false);
-                clientContext.Load(site, s => s.SharingCapability);
-                site.Context.ExecuteQueryRetry();
+                var siteProperties = tenant.GetSitePropertiesByUrl(siteUrl, false);
+                clientContext.Load(siteProperties, s => s.SharingCapability);
+                siteProperties.Context.ExecuteQueryRetry();
 
                 bool sharingUpdated = false;
                 SharingCapabilities externalShareCapabilities;
@@ -59,13 +59,13 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                         externalShareCapabilities = SharingCapabilities.Disabled;
                         break;
                 }
-                if (site.SharingCapability != externalShareCapabilities)
+                if (siteProperties.SharingCapability != externalShareCapabilities)
                 {
                     sharingUpdated = true;
-                    site.SharingCapability = externalShareCapabilities;
+                    siteProperties.SharingCapability = externalShareCapabilities;
+                    siteProperties.Update();
                     clientContext.ExecuteQueryRetry();
                 }
-
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
