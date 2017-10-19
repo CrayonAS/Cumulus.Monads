@@ -40,6 +40,10 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 request.TemplateURL = request.TemplateURL.Trim(); // remove potential spaces/line breaks
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
+                var web = clientContext.Web;
+                web.Lists.EnsureSiteAssetsLibrary();
+                clientContext.ExecuteQueryRetry();
+
                 Uri fileUri = new Uri(request.TemplateURL);
                 var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, fileUri);
                 var templateContext = clientContext.Clone(webUrl.ToString());
