@@ -31,11 +31,14 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 string schemaKey = request.Key;
                 string schemaLabel = request.Label;
                 string schemaValue = schemaKey.Replace("Key", "Value");
-                
+
 
                 dynamic property = new ExpandoObject();
                 ((IDictionary<string, object>)property).Add(schemaKey, request.Key);
-                ((IDictionary<string, object>)property).Add(schemaLabel, schemaLabel);
+                if (!string.IsNullOrWhiteSpace(schemaLabel))
+                {
+                    ((IDictionary<string, object>)property).Add(schemaLabel, schemaLabel);
+                }
                 ((IDictionary<string, object>)property).Add(schemaValue, request.Value);
 
                 dynamic template = new ExpandoObject();
