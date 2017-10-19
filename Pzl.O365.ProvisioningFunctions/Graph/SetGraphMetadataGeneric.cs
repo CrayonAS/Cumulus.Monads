@@ -28,18 +28,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             {
                 const string extensionName = "techmikael_GenericSchema";
 
-                string schemaKey = request.Key;
-                string schemaLabel = request.Label;
-                string schemaValue = schemaKey.Replace("Key", "Value");
-
+                string propertyName = request.Name;
 
                 dynamic property = new ExpandoObject();
-                //((IDictionary<string, object>)property).Add(schemaKey, request.Key);
-                if (!string.IsNullOrWhiteSpace(schemaLabel))
-                {
-                    ((IDictionary<string, object>)property).Add(schemaLabel, schemaLabel);
-                }
-                ((IDictionary<string, object>)property).Add(schemaValue, request.Value);
+                ((IDictionary<string, object>)property).Add(propertyName, request.Value);
 
                 dynamic template = new ExpandoObject();
                 ((IDictionary<string, object>)template).Add(extensionName, property);
@@ -83,11 +75,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             public string GroupId { get; set; }
 
             [Required]
-            [Display(Description = "Metadata key. E.g.: KeyString00")]
-            public string Key { get; set; }
-
-            [Display(Description = "Metadata label. E.g.: LabelString00")]
-            public string Label { get; set; }
+            [Display(Description = "Metadata name. E.g.: ValueString00, KeyString00, LabelString00")]
+            public string Name { get; set; }
 
             [Required]
             [Display(Description = "Metadata value. The actual value to be stored in e.g. ValueString00")]
