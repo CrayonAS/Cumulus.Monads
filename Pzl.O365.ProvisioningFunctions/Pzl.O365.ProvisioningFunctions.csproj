@@ -5,8 +5,8 @@
   <ItemGroup>    
     <PackageReference Include="Microsoft.Graph" Version="1.6.2" />    
     <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="3.17.0" />    
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.5" />    
-    <PackageReference Include="SharePointPnPCoreOnline" Version="2.19.1710" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.6" />    
+    <PackageReference Include="SharePointPnPCoreOnline" Version="2.19.1710.1" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
