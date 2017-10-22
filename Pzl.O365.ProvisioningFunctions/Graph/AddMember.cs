@@ -14,7 +14,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
     public static class AddMember
     {
         [FunctionName("AddMember")]
-        [Display(Name = "Add an member to an Office 365 Group", Description = "This action will add an member to an Office 365 Group")]
+        [Display(Name = "Add a member to an Office 365 Group", Description = "This action will add an member to an Office 365 Group")]
         public static async Task<AddMemberResponse> Run([HttpTrigger(AuthorizationLevel.Function, "post")]AddMemberRequest request, TraceWriter log)
         {
             GraphServiceClient client = ConnectADAL.GetGraphClient();
