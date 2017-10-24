@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
@@ -9,6 +10,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.SharePoint.Client;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OfficeDevPnP.Core.Pages;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
 namespace Pzl.O365.ProvisioningFunctions.SharePoint
@@ -35,6 +39,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             var clientContext = await ConnectADAL.GetClientContext(rootUrl, log);
             var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, fileUri);
             var fileContext = clientContext.Clone(webUrl.ToString());
+            var web = fileContext.Web;
+
+            PatchListWebPartUrl(log, web, fileName);
 
             bool published = false;
             try
@@ -66,6 +73,33 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
+            }
+        }
+
+        private static void PatchListWebPartUrl(TraceWriter log, Web web, string fileName)
+        {
+            try
+            {
+                var homePage = web.LoadClientSidePage(fileName);
+                foreach (ClientSideWebPart canvasControl in homePage.Controls.OfType<ClientSideWebPart>())
+                {
+                    dynamic data = JObject.Parse(canvasControl.PropertiesJson);
+                    if (data["selectedListId"] != null)
+                    {
+                        Guid id = data.selectedListId;
+                        List list = web.Lists.GetById(id);
+                        web.Context.Load(list, l => l.RootFolder);
+                        web.Context.ExecuteQueryRetry();
+                        data.selectedListUrl = list.RootFolder.ServerRelativeUrl;
+                        canvasControl.PropertiesJson = JsonConvert.SerializeObject(data);
+                    }
+                }
+                homePage.Save();
+                log.Info("Fixed show all links for web parts");
+            }
+            catch (Exception)
+            {
+                log.Error("Not a client side page");
             }
         }
 
