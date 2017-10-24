@@ -24,7 +24,6 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
-                System.Threading.Thread.Sleep(30000); // pause 30 seconds to give it some time
                 bool moved = await MoveEveryoneUser(log, siteUrl);
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
