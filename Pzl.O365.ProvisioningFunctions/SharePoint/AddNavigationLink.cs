@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
@@ -29,7 +28,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 var web = clientContext.Web;
                 if (string.IsNullOrWhiteSpace(request.ParentTitle)) request.ParentTitle = string.Empty;
-                var node = web.AddNavigationNode(request.Title, request.NavigationURL, request.ParentTitle, request.Type);
+                bool isExternal = !request.NavigationURL.Contains("sharepoint.com");
+                var node = web.AddNavigationNode(request.Title, new Uri(request.NavigationURL), request.ParentTitle, request.Type, isExternal, !request.AddFirst);
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -57,7 +57,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             public string Title { get; set; }
 
             [Display(Description = "Navigation URL")]
-            public Uri NavigationURL { get; set; }
+            public string NavigationURL { get; set; }
 
             [Display(Description = "Parent navigation title")]
             public string ParentTitle { get; set; }
@@ -65,6 +65,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             [Required]
             [Display(Description = "Type of navigation")]
             public NavigationType Type { get; set; }
+
+            [Display(Description = "Add as first navigation node")]
+            public bool AddFirst { get; set; }
         }
 
         public class AddNavigationResponse
