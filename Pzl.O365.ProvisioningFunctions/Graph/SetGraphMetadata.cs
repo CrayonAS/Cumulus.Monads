@@ -95,9 +95,9 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         public enum MetadataField
         {
-            [Display(Name = "Type arbeidsrom")]
+            [Display(Name = "Type rom")]
             GroupType = 0,
-            [Display(Name = "Ansvarlig for arbeidsrom")]
+            [Display(Name = "Ansvarlig for rom")]
             Responsible = 1,
             [Display(Name = "Oppstartsdato")]
             StartDate = 2,
