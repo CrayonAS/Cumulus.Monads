@@ -8,8 +8,6 @@ using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Online.SharePoint.TenantAdministration;
-using Microsoft.SharePoint.Client;
 using OfficeDevPnP.Core.Utilities;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
