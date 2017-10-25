@@ -97,7 +97,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             [Display(Name = "Type rom")]
             GroupType = 0,
-            [Display(Name = "Ansvarlig for rom")]
+            [Display(Name = "Kontaktperson")]
             Responsible = 1,
             [Display(Name = "Oppstartsdato")]
             StartDate = 2,
