@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
@@ -10,9 +9,6 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.SharePoint.Client;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using OfficeDevPnP.Core.Pages;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
 namespace Pzl.O365.ProvisioningFunctions.SharePoint
@@ -27,7 +23,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             string fileName = System.IO.Path.GetFileName(request.FileURL);
             if (string.IsNullOrWhiteSpace(fileName))
             {
-                log.Error($"Error: filename is missing");
+                log.Error("Error: filename is missing");
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
                     Content = new ObjectContent<string>("Filename is missing", new JsonMediaTypeFormatter())
@@ -40,8 +36,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, fileUri);
             var fileContext = clientContext.Clone(webUrl.ToString());
             var web = fileContext.Web;
-
-            PatchListWebPartUrl(log, web, fileName);
+            fileContext.Load(web, w => w.ServerRelativeUrl);
 
             bool published = false;
             try
@@ -49,6 +44,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var file = fileContext.Web.GetFileByUrl(request.FileURL);
                 fileContext.Load(file);
                 fileContext.ExecuteQueryRetry();
+
                 if (file.CheckOutType != CheckOutType.None)
                 {
                     file.UndoCheckOut();
@@ -57,6 +53,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 {
                     published = true;
                     file.CheckOut();
+
+                    PatchListUrls(file, fileContext, web);
+
                     file.CheckIn("Publish major version", CheckinType.MajorCheckIn);
                 }
                 fileContext.ExecuteQueryRetry();
@@ -76,31 +75,18 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             }
         }
 
-        private static void PatchListWebPartUrl(TraceWriter log, Web web, string fileName)
+        private static void PatchListUrls(File file, ClientContext fileContext, Web web)
         {
-            try
-            {
-                var homePage = web.LoadClientSidePage(fileName);
-                foreach (ClientSideWebPart canvasControl in homePage.Controls.OfType<ClientSideWebPart>())
-                {
-                    dynamic data = JObject.Parse(canvasControl.PropertiesJson);
-                    if (data["selectedListId"] != null)
-                    {
-                        Guid id = data.selectedListId;
-                        List list = web.Lists.GetById(id);
-                        web.Context.Load(list, l => l.RootFolder);
-                        web.Context.ExecuteQueryRetry();
-                        data.selectedListUrl = list.RootFolder.ServerRelativeUrl;
-                        canvasControl.PropertiesJson = JsonConvert.SerializeObject(data);
-                    }
-                }
-                homePage.Save();
-                log.Info("Fixed show all links for web parts");
-            }
-            catch (Exception)
-            {
-                log.Error("Not a client side page");
-            }
+            var item = file.ListItemAllFields;
+            fileContext.Load(item);
+            fileContext.ExecuteQueryRetry();
+            var html = (string) item["CanvasContent1"];
+            html = html.Replace("selectedListUrl&quot;&#58;&quot;Delte dokumenter&quot;",
+                $"selectedListUrl&quot;&#58;&quot;{web.ServerRelativeUrl}/Delte dokumenter&quot;");
+            html = html.Replace("selectedListUrl&quot;&#58;&quot;Interne dokumenter&quot;",
+                $"selectedListUrl&quot;&#58;&quot;{web.ServerRelativeUrl}/Delte dokumenter&quot;");
+            item["CanvasContent1"] = html;
+            item.Update();
         }
 
         public class PublishFileRequest
