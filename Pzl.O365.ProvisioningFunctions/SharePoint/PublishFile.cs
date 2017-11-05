@@ -84,7 +84,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             html = html.Replace("selectedListUrl&quot;&#58;&quot;Delte dokumenter&quot;",
                 $"selectedListUrl&quot;&#58;&quot;{web.ServerRelativeUrl}/Delte dokumenter&quot;");
             html = html.Replace("selectedListUrl&quot;&#58;&quot;Interne dokumenter&quot;",
-                $"selectedListUrl&quot;&#58;&quot;{web.ServerRelativeUrl}/Delte dokumenter&quot;");
+                $"selectedListUrl&quot;&#58;&quot;{web.ServerRelativeUrl}/Interne dokumenter&quot;");
             item["CanvasContent1"] = html;
             item.Update();
         }
