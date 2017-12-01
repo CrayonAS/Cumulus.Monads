@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -7,6 +8,8 @@ using Microsoft.SharePoint.Client;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Graph;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
@@ -19,14 +22,17 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
     {
         private static readonly Uri ADALLogin = new Uri("https://login.windows.net/");
         const string GraphResourceId = "https://graph.microsoft.com"; // Microsoft Graph End-point
-        internal static readonly string AppId = Environment.GetEnvironmentVariable("ADALAppId");
-        private static readonly string AppSecret = Environment.GetEnvironmentVariable("ADALAppSecret");
-        private static readonly string AppCert = Environment.GetEnvironmentVariable("ADALAppCertificate");
-        private static readonly string AppCertKey = Environment.GetEnvironmentVariable("ADALAppCertificateKey");
+        private static string _appId = Environment.GetEnvironmentVariable("ADALAppId");
+        private static string _appSecret = Environment.GetEnvironmentVariable("ADALAppSecret");
+        private static string _appCert = Environment.GetEnvironmentVariable("ADALAppCertificate");
+        private static string _appCertKey = Environment.GetEnvironmentVariable("ADALAppCertificateKey");
         private static readonly string ADALDomain = Environment.GetEnvironmentVariable("ADALDomain");
         private static readonly Dictionary<string, AuthenticationResult> ResourceTokenLookup = new Dictionary<string, AuthenticationResult>();
         private static readonly string MsiEndpoint = Environment.GetEnvironmentVariable("MSI_ENDPOINT");
         private static readonly string MsiSecret = Environment.GetEnvironmentVariable("MSI_SECRET");
+
+        private static readonly AzureServiceTokenProvider AzureServiceTokenProvider = new AzureServiceTokenProvider();
+        private static readonly KeyVaultClient KvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(AzureServiceTokenProvider.KeyVaultTokenCallback));
 
         public class MsiInformation
         {
@@ -34,56 +40,70 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             public string BearerToken { get; set; }
         }
 
+        private static string SecretUri(string secret)
+        {
+            return $"{ConfigurationManager.AppSettings["KeyVaultUri"].TrimEnd('/')}/Secrets/{secret}";
+        }
+
+        private static async Task GetVariables()
+        {
+            //http://integration.team/2017/09/25/retrieve-azure-key-vault-secrets-using-azure-functions-managed-service-identity/
+            if (string.IsNullOrEmpty(_appId)) _appId = (await KvClient.GetSecretAsync(SecretUri("ADALAppId"))).Value;
+            if (string.IsNullOrEmpty(_appSecret)) _appSecret = (await KvClient.GetSecretAsync(SecretUri("ADALAppSecret"))).Value;
+            if (string.IsNullOrEmpty(_appCert)) _appCert = (await KvClient.GetSecretAsync(SecretUri("ADALAppCertificate"))).Value;
+            if (string.IsNullOrEmpty(_appCertKey)) _appCertKey = (await KvClient.GetSecretAsync(SecretUri("ADALAppCertificateKey"))).Value;
+        }
+
         private static async Task<string> GetAccessToken(string AADDomain)
         {
+            await GetVariables();
             AuthenticationResult token;
-            if (!ResourceTokenLookup.TryGetValue(GraphResourceId, out token) || token.ExpiresOn.UtcDateTime < DateTime.UtcNow)
+            if (ResourceTokenLookup.TryGetValue(GraphResourceId, out token) &&
+                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow) return token.AccessToken;
+
+            var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
+            var clientCredential = new ClientCredential(_appId, _appSecret);
+
+            bool keepRetry = false;
+            do
             {
-                var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
-                var clientCredential = new ClientCredential(AppId, AppSecret);
-
-                bool keepRetry = false;
-                do
+                TimeSpan? delay = null;
+                try
                 {
-                    TimeSpan? delay = null;
-                    try
-                    {
-                        token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
+                    token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
 
-                        AdalServiceException serviceException;
-                        if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
-                        else serviceException = (AdalServiceException)ex.InnerException;
-                        if (serviceException.ErrorCode == "temporarily_unavailable")
+                    AdalServiceException serviceException;
+                    if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
+                    else serviceException = (AdalServiceException)ex.InnerException;
+                    if (serviceException.ErrorCode == "temporarily_unavailable")
+                    {
+                        RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
+                        if (retry.Delta.HasValue)
                         {
-                            RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
-                            if (retry.Delta.HasValue)
-                            {
-                                delay = retry.Delta;
-                            }
-                            else if (retry.Date.HasValue)
-                            {
-                                delay = retry.Date.Value.Offset;
-                            }
-                            if (delay.HasValue)
-                            {
-                                Thread.Sleep((int) delay.Value.TotalSeconds); // sleep or other
-                                keepRetry = true;
-                            }
+                            delay = retry.Delta;
                         }
-                        else
+                        else if (retry.Date.HasValue)
                         {
-                            throw;
+                            delay = retry.Date.Value.Offset;
+                        }
+                        if (delay.HasValue)
+                        {
+                            Thread.Sleep((int)delay.Value.TotalSeconds); // sleep or other
+                            keepRetry = true;
                         }
                     }
-                } while (keepRetry);
+                    else
+                    {
+                        throw;
+                    }
+                }
+            } while (keepRetry);
 
-                //var url = await authenticationContext.GetAuthorizationRequestUrlAsync(resourceUri, AppId, new Uri("https://techmikael.sharepoint.com/o365"), ADAL.UserIdentifier.AnyUser, "prompt=admin_consent");
-                ResourceTokenLookup[GraphResourceId] = token;
-            }
+            ResourceTokenLookup[GraphResourceId] = token;
             return token.AccessToken;
         }
 
@@ -216,12 +236,11 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
 
         private static ClientAssertionCertificate GetClientAssertionCertificate()
         {
-            var generator = new Certificate.Certificate(AppCert, AppCertKey, "");
+            var generator = new Certificate.Certificate(_appCert, _appCertKey, "");
             X509Certificate2 cert = generator.GetCertificateFromPEMstring(false);
-            ClientAssertionCertificate cac = new ClientAssertionCertificate(AppId, cert);
+            ClientAssertionCertificate cac = new ClientAssertionCertificate(_appId, cert);
             return cac;
         }
-
 
         public static async Task<ClientContext> GetClientContext(string url, TraceWriter log = null)
         {
