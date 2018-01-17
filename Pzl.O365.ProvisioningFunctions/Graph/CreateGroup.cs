@@ -29,7 +29,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             GraphServiceClient client = ConnectADAL.GetGraphClient();
             var newGroup = new Group
             {
-                DisplayName = GetDisplayName(request.Name, request.Type),
+                DisplayName = GetDisplayName(request.Name),
                 Description = request.Description,
                 MailNickname = mailNickName,
                 MailEnabled = true,
@@ -42,10 +42,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             return new CreateGroupResponse() { GroupId = addedGroup.Id };
         }
 
-        static string GetDisplayName(string name, string type)
+        static string GetDisplayName(string name)
         {
             string displayName = Regex.Replace(name, type + @":?\s+", "", RegexOptions.IgnoreCase);
-            return $"{type}: {displayName}";
+            return displayName;
         }
 
         static async Task<string> GetUniqueMailAlias(string name, string type)
@@ -88,7 +88,6 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Required]
             public string Description { get; set; }
             [Required]
-            [Display(Description = "Samhandling / Prosjekt / Ekstranett")]
             public string Type { get; set; }
             [Required]
             public string Responsible { get; set; }
