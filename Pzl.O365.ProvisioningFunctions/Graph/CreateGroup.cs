@@ -41,13 +41,14 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 };
 
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
+                var createGroupResponse = new CreateGroupResponse { 
+                    GroupId = addedGroup.Id,
+                    DisplayName = displayName,
+                    MailNickname = mailNickName
+                };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse { 
-                        GroupId = addedGroup.Id,
-                        DisplayName = displayName,
-                        MailNickname = mailNickName
-                    }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
                 });
             } 
             catch (Exception e)
