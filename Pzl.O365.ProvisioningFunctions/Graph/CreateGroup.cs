@@ -45,7 +45,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         static string GetDisplayName(string name, string prefix)
         {
              string displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
-             prefix = string.IsNullOrWhiteSpace(prefix)) ? "" : $"{prefix}: ";
+             prefix = string.IsNullOrWhiteSpace(prefix) ? "" : $"{prefix}: ";
 -            return $"{prefix}{displayName}";
         }
 
