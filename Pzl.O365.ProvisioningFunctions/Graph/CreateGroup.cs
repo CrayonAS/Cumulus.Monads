@@ -32,7 +32,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 var newGroup = new Group
                 {
                     DisplayName = displayName,
-                    Description = request.Description,
+                    Description = GetDescription(request.Description, 1000),
                     MailNickname = mailNickName,
                     MailEnabled = true,
                     SecurityEnabled = false,
@@ -70,6 +70,16 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
              } else {
                 return $"{prefix}: {displayName}";
              }
+        }
+
+        static string GetDescription(string description, int maxLength)
+        {
+            if (description > maxLength)
+            {
+                return description.Substring(0, maxLength);
+            } else {
+                return description;
+            }
         }
 
         static async Task<string> GetUniqueMailAlias(string name, string prefix = "")
