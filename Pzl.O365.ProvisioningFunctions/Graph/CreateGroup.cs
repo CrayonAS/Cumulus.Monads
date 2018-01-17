@@ -46,7 +46,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                     Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse { 
                         Id = addedGroup.Id,
                         DisplayName = displayName,
-                        MailNickname = mailNickname
+                        MailNickname = mailNickName
                     }, new JsonMediaTypeFormatter())
                 });
             } 
