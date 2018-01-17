@@ -45,8 +45,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         static string GetDisplayName(string name, string prefix)
         {
              string displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
-             prefix = string.IsNullOrWhiteSpace(prefix) ? "" : $"{prefix}: ";
--            return prefix + displayName;
+             if(string.IsNullOrWhiteSpace(prefix)) {
+                 return displayName;
+             } else {
+                 return $"{prefix}: {displayName}"
+             }
         }
 
         static async Task<string> GetUniqueMailAlias(string name, string prefix)
