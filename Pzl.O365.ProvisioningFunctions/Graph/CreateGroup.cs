@@ -74,7 +74,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static string GetDescription(string description, int maxLength)
         {
-            if (description > maxLength)
+            if (description.Length > maxLength)
             {
                 return description.Substring(0, maxLength);
             } else {
