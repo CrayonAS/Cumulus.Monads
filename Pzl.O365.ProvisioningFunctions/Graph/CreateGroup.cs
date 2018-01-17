@@ -16,25 +16,39 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
     {
 
         [FunctionName("CreateGroup")]
+        [ResponseType(typeof(CreateGroupResponse))]
         [Display(Name = "Create Office 365 Group", Description = "This action will create a new Office 365 Group")]
         public static async Task<CreateGroupResponse> Run([HttpTrigger(AuthorizationLevel.Function, "post")]CreateGroupRequest request, TraceWriter log)
         {
-            string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
-
-            GraphServiceClient client = ConnectADAL.GetGraphClient();
-            var newGroup = new Group
+            try
             {
-                DisplayName = GetDisplayName(request.Name, request.Prefix),
-                Description = "",
-                MailNickname = mailNickName,
-                MailEnabled = true,
-                SecurityEnabled = false,
-                Visibility = request.Public ? "Public" : "Private",
-                GroupTypes = new List<string> { "Unified" },
-            };
+                string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
+                GraphServiceClient client = ConnectADAL.GetGraphClient();
+                var newGroup = new Group
+                {
+                    DisplayName = GetDisplayName(request.Name, request.Prefix),
+                    Description = "",
+                    MailNickname = mailNickName,
+                    MailEnabled = true,
+                    SecurityEnabled = false,
+                    Visibility = request.Public ? "Public" : "Private",
+                    GroupTypes = new List<string> { "Unified" },
+                };
 
-            var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-            return new CreateGroupResponse() { GroupId = addedGroup.Id };
+                var addedGroup = await client.Groups.Request().AddAsync(newGroup);
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ObjectContent<IsSiteReadyResponse>(new IsSiteReadyResponse{ GroupId = addedGroup.Id }, new JsonMediaTypeFormatter())
+                });
+            } 
+            catch (Exception e)
+            {
+                log.Error($"Error:  {e.Message }\n\n{e.StackTrace}");
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
+                });
+            }
         }
 
         static string GetDisplayName(string name, string prefix)
