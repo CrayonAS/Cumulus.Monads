@@ -41,7 +41,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 };
 
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-                var createGroupResponse = new CreateGroupResponse { 
+                var createGroupResponse = new CreateGroupResponse 
+                { 
                     GroupId = addedGroup.Id,
                     DisplayName = displayName,
                     MailNickname = mailNickName
