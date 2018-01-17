@@ -44,7 +44,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static string GetDisplayName(string name)
         {
-            string displayName = Regex.Replace(name, type + @":?\s+", "", RegexOptions.IgnoreCase);
+            string displayName = Regex.Replace(name, @":?\s+", "", RegexOptions.IgnoreCase);
             return displayName;
         }
 
