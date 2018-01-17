@@ -42,7 +42,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<IsSiteReadyResponse>(new IsSiteReadyResponse{ GroupId = addedGroup.Id }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse{ GroupId = addedGroup.Id }, new JsonMediaTypeFormatter())
                 });
             } 
             catch (Exception e)
