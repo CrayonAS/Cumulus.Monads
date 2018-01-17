@@ -31,7 +31,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 var newGroup = new Group
                 {
                     DisplayName = GetDisplayName(request.Name, request.Prefix),
-                    Description = "",
+                    Description = request.Description,
                     MailNickname = mailNickName,
                     MailEnabled = true,
                     SecurityEnabled = false,
@@ -108,6 +108,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Name of the group")]
             public string Name { get; set; }
 
+            [Required]
             [Display(Description = "Description of the group")]
             public string Description { get; set; }
 
