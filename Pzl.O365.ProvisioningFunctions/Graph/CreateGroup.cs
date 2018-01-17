@@ -19,7 +19,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         [Display(Name = "Create Office 365 Group", Description = "This action will create a new Office 365 Group")]
         public static async Task<CreateGroupResponse> Run([HttpTrigger(AuthorizationLevel.Function, "post")]CreateGroupRequest request, TraceWriter log)
         {
-            string mailNickName = await GetUniqueMailAlias(request.Name, request.Type);
+            string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
 
             if (request.Description.Length > 1000)
             {
@@ -29,7 +29,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             GraphServiceClient client = ConnectADAL.GetGraphClient();
             var newGroup = new Group
             {
-                DisplayName = GetDisplayName(request.Name),
+                DisplayName = GetDisplayName(request.Name, request.Prefix),
                 Description = request.Description,
                 MailNickname = mailNickName,
                 MailEnabled = true,
@@ -42,17 +42,19 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             return new CreateGroupResponse() { GroupId = addedGroup.Id };
         }
 
-        static string GetDisplayName(string name)
+        static string GetDisplayName(string name, string prefix)
         {
-            string displayName = Regex.Replace(name, @":?\s+", "", RegexOptions.IgnoreCase);
-            return displayName;
+             string displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+             prefix = string.IsNullOrWhiteSpace(prefix)) ? "" : $"{prefix}: ";
+-            return $"{prefix}{displayName}";
         }
 
-        static async Task<string> GetUniqueMailAlias(string name, string type)
+        static async Task<string> GetUniqueMailAlias(string name, string prefix)
         {
-            var mailNickname = Regex.Replace(name.ToLower(), type + @":?\s+", "", RegexOptions.IgnoreCase);
+            var mailNickname = Regex.Replace(name.ToLower(), prefix + @":?\s+", "", RegexOptions.IgnoreCase);
             mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "");
-            mailNickname = $"{type}-{mailNickname}".ToLower();
+            prefix = string.IsNullOrWhiteSpace(prefix)) ? "" : $"{prefix}-";
+            mailNickname = $"{prefix}-{mailNickname}".ToLower();
             if (string.IsNullOrWhiteSpace(mailNickname))
             {
                 mailNickname = new Random().Next(0, 9).ToString();
@@ -87,8 +89,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             public string Name { get; set; }
             [Required]
             public string Description { get; set; }
-            [Required]
-            public string Type { get; set; }
+            public string Prefix { get; set; }
             [Required]
             public string Responsible { get; set; }
             [Required]
