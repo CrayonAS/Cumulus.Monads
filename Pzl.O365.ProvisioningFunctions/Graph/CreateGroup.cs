@@ -18,7 +18,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         [FunctionName("CreateGroup")]
         [ResponseType(typeof(CreateGroupResponse))]
         [Display(Name = "Create Office 365 Group", Description = "This action will create a new Office 365 Group")]
-        public static async Task<CreateGroupResponse> Run([HttpTrigger(AuthorizationLevel.Function, "post")]CreateGroupRequest request, TraceWriter log)
+        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]CreateGroupRequest request, TraceWriter log)
         {
             try
             {
