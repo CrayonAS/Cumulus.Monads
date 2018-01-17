@@ -27,10 +27,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             try
             {
                 string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
+                string displayName = GetDisplayName(request.Name, request.Prefix);
                 GraphServiceClient client = ConnectADAL.GetGraphClient();
                 var newGroup = new Group
                 {
-                    DisplayName = GetDisplayName(request.Name, request.Prefix),
+                    DisplayName = displayName,
                     Description = request.Description,
                     MailNickname = mailNickName,
                     MailEnabled = true,
@@ -42,7 +43,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse{ GroupId = addedGroup.Id }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse { 
+                        Id = addedGroup.Id,
+                        DisplayName = displayName,
+                        MailNickname = mailNickname
+                    }, new JsonMediaTypeFormatter())
                 });
             } 
             catch (Exception e)
@@ -127,7 +132,13 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         public class CreateGroupResponse
         {
             [Display(Description = "Id of the Office 365 Group")]
-            public string GroupId { get; set; }
+            public string Id { get; set; }
+
+            [Display(Description = "DisplayName of the Office 365 Group")]
+            public string DisplayName { get; set; }
+            
+            [Display(Description = "MailNickname of the Office 365 Group")]
+            public string MailNickname { get; set; }
         }
     }
 }
