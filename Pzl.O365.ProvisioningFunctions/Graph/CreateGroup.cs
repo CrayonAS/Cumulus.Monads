@@ -26,6 +26,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             try
             {
+                if(string.IsNullOrWhiteSpace(request.Name)) {
+                    throw new ArgumentException("Parameter Name cannot be null", "");
+                }
+                if(string.IsNullOrWhiteSpace(request.Description)) {
+                    throw new ArgumentException("Parameter Description cannot be null", "");
+                }
                 string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
                 string displayName = GetDisplayName(request.Name, request.Prefix);
                 GraphServiceClient client = ConnectADAL.GetGraphClient();
