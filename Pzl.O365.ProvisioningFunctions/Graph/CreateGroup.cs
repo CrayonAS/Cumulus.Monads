@@ -44,7 +44,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new ObjectContent<CreateGroupResponse>(new CreateGroupResponse { 
-                        Id = addedGroup.Id,
+                        GroupId = addedGroup.Id,
                         DisplayName = displayName,
                         MailNickname = mailNickName
                     }, new JsonMediaTypeFormatter())
@@ -132,7 +132,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         public class CreateGroupResponse
         {
             [Display(Description = "Id of the Office 365 Group")]
-            public string Id { get; set; }
+            public string GroupId { get; set; }
 
             [Display(Description = "DisplayName of the Office 365 Group")]
             public string DisplayName { get; set; }
