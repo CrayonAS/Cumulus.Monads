@@ -27,10 +27,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             try
             {
                 if(string.IsNullOrWhiteSpace(request.Name)) {
-                    throw new ArgumentException("Parameter Name cannot be null", "");
+                    throw new ArgumentException("Parameter cannot be null", "Name");
                 }
                 if(string.IsNullOrWhiteSpace(request.Description)) {
-                    throw new ArgumentException("Parameter Description cannot be null", "");
+                    throw new ArgumentException("Parameter cannot be null", "Description");
                 }
                 string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
                 string displayName = GetDisplayName(request.Name, request.Prefix);
