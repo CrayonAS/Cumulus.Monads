@@ -44,17 +44,17 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static string GetDisplayName(string name, string prefix)
         {
-             string displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+             string displayName = Regex.Replace(name, @":?\s+", "", RegexOptions.IgnoreCase);
              if(string.IsNullOrWhiteSpace(prefix)) {
-                 return displayName;
+                return displayName;
              } else {
-                 return $"{prefix}: {displayName}";
+                return $"{prefix}: {displayName}";
              }
         }
 
-        static async Task<string> GetUniqueMailAlias(string name, string prefix)
+        static async Task<string> GetUniqueMailAlias(string name, string prefix = "")
         {
-            var mailNickname = Regex.Replace(name.ToLower(), prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+            var mailNickname = Regex.Replace(name.ToLower(), @":?\s+", "", RegexOptions.IgnoreCase);
             mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "");
             if(string.IsNullOrWhiteSpace(prefix)) {
                 mailNickname = mailNickname.ToLower();
