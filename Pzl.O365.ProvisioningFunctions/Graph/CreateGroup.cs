@@ -48,7 +48,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
              if(string.IsNullOrWhiteSpace(prefix)) {
                  return displayName;
              } else {
-                 return $"{prefix}: {displayName}"
+                 return $"{prefix}: {displayName}";
              }
         }
 
