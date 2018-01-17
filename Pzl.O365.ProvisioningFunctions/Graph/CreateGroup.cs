@@ -105,12 +105,21 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         public class CreateGroupRequest
         {
             [Required]
+            [Display(Description = "Name of the group")]
             public string Name { get; set; }
+
+            [Display(Description = "Description of the group")]
             public string Description { get; set; }
+
+            [Display(Description = "Prefix for group display name")]
             public string Prefix { get; set; }
+
             [Required]
+            [Display(Description = "Group responsible")]
             public string Responsible { get; set; }
+
             [Required]
+            [Display(Description = "Should the group be public")]
             public bool Public { get; set; }
         }
 
