@@ -54,7 +54,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             var mailNickname = Regex.Replace(name.ToLower(), prefix + @":?\s+", "", RegexOptions.IgnoreCase);
             mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "");
             prefix = string.IsNullOrWhiteSpace(prefix)) ? "" : $"{prefix}-";
-            mailNickname = $"{prefix}-{mailNickname}".ToLower();
+            mailNickname = $"{prefix}{mailNickname}".ToLower();
             if (string.IsNullOrWhiteSpace(mailNickname))
             {
                 mailNickname = new Random().Next(0, 9).ToString();
