@@ -21,18 +21,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
 
-            if (!string.IsNullOrWhiteSpace(request.Description) && request.Description.Length > 1000)
-            {
-                request.Description = request.Description.Substring(0, 1000);
-            } else {
-                request.Description = "";
-            }
-
             GraphServiceClient client = ConnectADAL.GetGraphClient();
             var newGroup = new Group
             {
                 DisplayName = GetDisplayName(request.Name, request.Prefix),
-                Description = request.Description,
+                Description = "",
                 MailNickname = mailNickName,
                 MailEnabled = true,
                 SecurityEnabled = false,
