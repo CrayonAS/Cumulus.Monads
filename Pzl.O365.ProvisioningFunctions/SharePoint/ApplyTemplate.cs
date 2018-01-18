@@ -35,6 +35,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]ApplyTemplateRequest request, TraceWriter log)
         {
             Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
             string siteUrl = request.SiteURL;
             RedirectAssembly();
             try
