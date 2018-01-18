@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
@@ -33,28 +34,29 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
         [Display(Name = "Apply PnP template to site", Description = "Apply a PnP template to the site.")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]ApplyTemplateRequest request, TraceWriter log)
         {
+            Stopwatch stopWatch = new Stopwatch();
             string siteUrl = request.SiteURL;
             RedirectAssembly();
             try
             {
-                request.TemplateURL = request.TemplateURL.Trim(); // remove potential spaces/line breaks
+                string templateUrl = request.TemplateURL.Trim(); // remove potential spaces/line breaks
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
                 var web = clientContext.Web;
                 web.Lists.EnsureSiteAssetsLibrary();
                 clientContext.ExecuteQueryRetry();
 
-                Uri fileUri = new Uri(request.TemplateURL);
-                var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, fileUri);
+                Uri templateFileUri = new Uri(templateUrl);
+                var webUrl = Web.WebUrlFromFolderUrlDirect(clientContext, templateFileUri);
                 var templateContext = clientContext.Clone(webUrl.ToString());
 
-                var library = request.TemplateURL.ToLower().Replace(templateContext.Url.ToLower(), "").TrimStart('/');
+                var library = templateUrl.ToLower().Replace(templateContext.Url.ToLower(), "").TrimStart('/');
                 var idx = library.IndexOf("/", StringComparison.Ordinal);
                 library = library.Substring(0, idx);
 
                 // This syntax creates a SharePoint connector regardless we have the -InputInstance argument or not
                 var fileConnector = new SharePointConnector(templateContext, templateContext.Url, library);
-                string templateFileName = Path.GetFileName(request.TemplateURL);
+                string templateFileName = Path.GetFileName(templateUrl);
                 XMLTemplateProvider provider = new XMLOpenXMLTemplateProvider(new OpenXMLConnector(templateFileName, fileConnector));
                 templateFileName = templateFileName.Substring(0, templateFileName.LastIndexOf(".", StringComparison.Ordinal)) + ".xml";
                 var provisioningTemplate = provider.GetTemplate(templateFileName, new ITemplateProviderExtension[0]);
@@ -84,14 +86,21 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 };
 
                 clientContext.Web.ApplyProvisioningTemplate(provisioningTemplate, applyingInformation);
+                stopWatch.Stop();
 
+                var applyTemplateResponse = new ApplyTemplateResponse 
+                { 
+                    TemplateApplied = true,
+                    ElapsedMilliseconds = stopWatch.ElapsedMilliseconds
+                };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<ApplyTemplateResponse>(new ApplyTemplateResponse { TemplateApplied = true }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<ApplyTemplateResponse>(applyTemplateResponse, new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
             {
+                stopWatch.Stop();
                 log.Error($"Error: {e.Message}\n\n{e.StackTrace}");
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
@@ -164,6 +173,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
         {
             [Display(Description = "True if template was applied")]
             public bool TemplateApplied { get; set; }
+
+            [Display(Description = "Elapsed time in miliseconds")]
+            public long ElapsedMilliseconds { get; set; }
         }
     }
 }
