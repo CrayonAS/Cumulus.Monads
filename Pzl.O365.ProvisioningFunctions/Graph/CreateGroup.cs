@@ -26,10 +26,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             try
             {
-                if(string.IsNullOrWhiteSpace(request.Name)) {
+                if (string.IsNullOrWhiteSpace(request.Name))
+                {
                     throw new ArgumentException("Parameter cannot be null", "Name");
                 }
-                if(string.IsNullOrWhiteSpace(request.Description)) {
+                if (string.IsNullOrWhiteSpace(request.Description))
+                {
                     throw new ArgumentException("Parameter cannot be null", "Description");
                 }
                 string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
@@ -46,8 +48,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                     GroupTypes = new List<string> { "Unified" },
                 };
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-                var createGroupResponse = new CreateGroupResponse 
-                { 
+                var createGroupResponse = new CreateGroupResponse
+                {
                     GroupId = addedGroup.Id,
                     DisplayName = displayName,
                     Mail = addedGroup.Mail
@@ -56,7 +58,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 {
                     Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
                 });
-            } 
+            }
             catch (Exception e)
             {
                 log.Error($"Error:  {e.Message }\n\n{e.StackTrace}");
@@ -69,12 +71,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static string GetDisplayName(string name, string prefix)
         {
-             string displayName = Regex.Replace(name, @":?\s+", "", RegexOptions.IgnoreCase);
-             if(string.IsNullOrWhiteSpace(prefix)) {
-                return displayName;
-             } else {
-                return $"{prefix}: {displayName}";
-             }
+            var displayName = name;
+            if (!string.IsNullOrWhiteSpace(prefix))
+            {
+                displayName = $"{prefix}: {displayName}";
+            }
+            return displayName;
         }
 
         static string GetDescription(string description, int maxLength)
@@ -82,7 +84,9 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             if (description.Length > maxLength)
             {
                 return description.Substring(0, maxLength);
-            } else {
+            }
+            else
+            {
                 return description;
             }
         }
@@ -91,9 +95,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         {
             var mailNickname = Regex.Replace(name.ToLower(), @":?\s+", "", RegexOptions.IgnoreCase);
             mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "");
-            if(string.IsNullOrWhiteSpace(prefix)) {
+            if (string.IsNullOrWhiteSpace(prefix))
+            {
                 mailNickname = mailNickname.ToLower();
-            } else {
+            }
+            else
+            {
                 mailNickname = $"{prefix}-{mailNickname}".ToLower();
             }
             if (string.IsNullOrWhiteSpace(mailNickname))
@@ -153,7 +160,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
             [Display(Description = "DisplayName of the Office 365 Group")]
             public string DisplayName { get; set; }
-            
+
             [Display(Description = "Mail of the Office 365 Group")]
             public string Mail { get; set; }
         }
