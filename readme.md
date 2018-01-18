@@ -29,8 +29,6 @@ Azure Functions communicate with Office 365 thru two API's. SharePoint CSOM and 
 
 ![img](images/adal-app.png)
 
-
-
 In addition to an ADAL app key/secret pair you have to add a certificate for access to SharePoint. The recommended practice is to set the key to never expire and set the certificate to expire in 20 years. You should also establish procedures for potentially changing the key and certificate on a schedule.
 
 # 2       Setup
@@ -111,6 +109,20 @@ The key is needed for Microsoft Flow to communicate with the Function App, and y
 You can copy the default API key from the _Application settings_ page for your Azure Function App.
 
 ![img](images/function-apikey.png)
+
+### 2.2.4       Connect to a code repository
+
+In order to get the actual functions into the Function App you have to connect the Function App to a code repository. On the _Platform features_ page click _Deployment options_.
+
+![img](images/deployment-options.png)
+
+Point to the repository where you have _Pzl.O365.ProvisioningFunctions_, and once saved the Function App should start to fetch the code, compile and deploy it.
+
+![img](images/code-repo.png)
+
+Once compiled you should see the functions listed in read-only mode.
+
+![img](images/function-list.png)
 
 ## 2.3       Azure Key Vault
 
