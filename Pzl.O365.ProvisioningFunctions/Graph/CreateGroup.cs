@@ -45,13 +45,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                     Visibility = request.Public ? "Public" : "Private",
                     GroupTypes = new List<string> { "Unified" },
                 };
-
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
                 var createGroupResponse = new CreateGroupResponse 
                 { 
                     GroupId = addedGroup.Id,
                     DisplayName = displayName,
-                    MailNickname = mailNickName
+                    Mail = addedGroup.Mail
                 };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -155,8 +154,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "DisplayName of the Office 365 Group")]
             public string DisplayName { get; set; }
             
-            [Display(Description = "MailNickname of the Office 365 Group")]
-            public string MailNickname { get; set; }
+            [Display(Description = "Mail of the Office 365 Group")]
+            public string Mail { get; set; }
         }
     }
 }
