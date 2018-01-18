@@ -7,8 +7,8 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers.Certificate
     {
         public Certificate(string cert, string key, string password)
         {
-            PublicCertificate = cert;
-            PrivateKey = key;
+            PublicCertificate = cert.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Replace("\r", string.Empty);
+            PrivateKey = key.Replace("\r\n", string.Empty).Replace("\n", string.Empty).Replace("\r", string.Empty);
             Password = password;
         }
 
