@@ -41,9 +41,9 @@ An ADAL application is created under the Azure Active Directory blade in the Azu
 
 ### 2.1.1       Setup
 
-**Name:** <give the app a senible name>
-**Application Type:** Web app / API
-**Sign-on URL:** https://<tenant>.sharepoint.com/provisioning (or another fqdn).
+**Name:** &lt;give the app a senible name&gt;<br/>
+**Application Type:** Web app / API<br/>
+**Sign-on URL:** https://&lt;tenant&gt;.sharepoint.com/provisioning (or another fqdn).
 
 #### Application permissions
 
@@ -56,13 +56,33 @@ Add the minimum of application-only permissions to the ADAL app. If you want to 
 
 **Note:** After saving the set permissions it's important to click the *Grant Permissions* button to make them available.
 
-### 2.1.2       Secrets
+![img](images/grant-permission.png)
 
-todo
+### 2.1.2       Secrets / Keys
+
+To use the ADAL app you need to generate a key which is the password for the application. Once you save make sure to copy the generated value as this is the only time you will see this. (ADAL keys are often called app secrets.)
+
+Depending on how you manage the ADAL app over time, pick an expiration date for the key, or set it to never expire (recommended).
+
+Store both the ADAL App Id and the key as you will need to add this into Azure Key Vault.
+
+![img](images/adal-app.png)
 
 ### 2.1.3       Certificate and manifest
 
-todo
+When talking to SharePoint using CSOM it's not enough to have the AppId and AppSecret. You will also need to add a certificate to the ADAL App manifest.
+
+As we will use base64 encoded versions of the certificate and the certificate private key, the easiest solution is to use https://github.com/formio/keycred (require npm) for certificate generation as it also outputs the modification to the ADAL App manifest.
+
+Fill in sensible information for the certificate. The details does not really matter as this is a self-signed certificate. The important part is how many years the certificate should last. 30 (seems to be) is the maximum which the ADAL app allows. If you pick a shorter time span align it with the expiration time for the ADAL app key.
+
+![img](images/keycred.png)
+
+Once the certificate is generated, take the _Key Credentials_ part and add to the ADAL App manifest.
+
+![img](images/manifest.png)
+
+Store the private key and the certificate which will be stored in Azure Key Vault.
 
 ## 2.2       Azure Function App
 
@@ -72,16 +92,25 @@ Create an Azure Function App as stated in 1.1.
 
 Under application settings for the function app set the following application setting variables. The URI for Azure Key Vault comes from the next step.
 
-| Name        | Value                                  |
-| ----------- | -------------------------------------- |
-| KeyVaultUri | https://<keyvaultname>.vault.azure.net |
-| ADALDomain  | <tenant>.onmicrosoft.com               |
+| Name        | Value                                    |
+| ----------- | ---------------------------------------- |
+| KeyVaultUri | https://&lt;keyvaultname&gt;.vault.azure.net |
+| ADALDomain  | &lt;tenant&gt;.onmicrosoft.com           |
 
 ### 2.2.2       Managed service identity
 
 In order to easily communicate between Azure Key Vault and Azure Functions we utilize the feature of managed service identities. This is a service account for this one Function App, and allows ease of setup between services without having to create our own service accounts in Azure AD.
 
 Navigate to platform feature for the Azure Function App and chose *Managed service identity*. Choose to integrate with Azure Active Directory and save. The name of the service identity will match that of the Azure Function App.
+
+### 2.2.3       API key
+Calling the Azure functions are secured using an API key. This means that without this key, any unwarranted calls will fail.
+
+The key is needed for Microsoft Flow to communicate with the Function App, and you need to copy it for use when setting up the connection between Flow and Azure Functions later on.
+
+You can copy the default API key from the _Application settings_ page for your Azure Function App.
+
+![img](images/function-apikey.png)
 
 ## 2.3       Azure Key Vault
 
@@ -99,20 +128,58 @@ Navigate to the Access policy setting for the key vault and click *Add new*. Und
 
 ### 2.3.2       Secrets
 
-Add the following four secrets of type *Manual* which you created in step 2.1.
+Add the following four secrets of type *Manual* which you created in step 2.1. AdalAppSecret is the key created for the ADAL application.
 
 | Name                  | Value                                    |
 | --------------------- | ---------------------------------------- |
 | ADALAppCertificateKey | -----BEGIN RSA PRIVATE  KEY-----MIIEpAIB…. |
 | ADALAppCertificate    | -----BEGIN  CERTIFICATE-----MIIDpzCCAo+gA… |
-| ADALAppId             | <ADAL App Id>                            |
+| ADALAppId             | &lt;ADAL App Id&gt;                      |
 | ADALAppSecret         | tLw1bhSm….                               |
 
-![img](images\keyvault-secrets.png)
+![img](images/keyvault-secrets.png)
+
+## 2.4       Custom connector for Flow
+### 2.4.1       Generate Swagger definition for the Azure Function App
+In the Azure Portal, navigate to the Azure Function App and select the function named _Swagger_. Click _Get function URL_ and copy the URL to the clipboard. 
+
+![img](images/swagger.png)
+
+Next paste the URL into a browser window.
+
+Copy the output and save to a temporary local file named _swagger.json_.
+
+### 2.4.2       Custom connector from the Azure Function App
+
+Log in at https://flow.microsoft.com as the service account, navigate to the _Custom Connectors_ page, and click _Create custom connector_.
+
+![img](images/custom-connectors.png)
+
+Name the connector _Office 365 Groups Provisioning_ and pick _Import an OpenAPI file_ and point to the file you just saved.
+
+![img](images/import-swagger.png)
+
+Click _Continue_ and then _Create connector_.
+
+Next navigate to the _Test_ tab and set up the actual connection.
+
+![img](images/connector-connection.png)
+
+Type in the API key you saved from your Azure Function in 2.2.3.
+
+![img](images/connection-apikey.png)
+
+Refresh the connections, pick the operation named _GetclassificationvaluesGet_ and click _Test operaion_. If evertything is set up correctly, you should get a status 200 back. If not, it's time to troubleshoot all the previous steps :)
+
+![img](images/test-connection.png)
+
+### 2.5       Flow
+
+todo
 
 
 
-## 2.4       Flow
 
-### 2.4.1       Connections
+
+
 
