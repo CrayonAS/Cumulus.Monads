@@ -36,19 +36,6 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 //     TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
                 //     if (termStore != null)
                 //     {
-                //         //
-                //         // Create group, termset, and terms.
-                //         //
-                //         TermGroup myGroup = termStore.CreateGroup("Custom", Guid.NewGuid());
-                //         TermSet myTermSet = myGroup.CreateTermSet("Colors", Guid.NewGuid(), 1033);
-                //         myTermSet.CreateTerm("Red", 1033, Guid.NewGuid());
-                //         myTermSet.CreateTerm("Orange", 1033, Guid.NewGuid());
-                //         myTermSet.CreateTerm("Yellow", 1033, Guid.NewGuid());
-                //         myTermSet.CreateTerm("Green", 1033, Guid.NewGuid());
-                //         myTermSet.CreateTerm("Blue", 1033, Guid.NewGuid());
-                //         myTermSet.CreateTerm("Purple", 1033, Guid.NewGuid());
-
-                //         clientContext.ExecuteQuery();
                 //     }
                 // }
                 var getTermPropertyResponse = new GetTermPropertyResponse
