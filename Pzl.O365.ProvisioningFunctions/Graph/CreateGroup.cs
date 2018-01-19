@@ -154,10 +154,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
             [Required]
             [Display(Description = "Should prefix be used for MailAlias")]
-            public bool UsePrefixInMailAlias { get; set; }
+            public bool UsePrefixInMailAlias { get; set; }           
         }
-    }
-    }
 
         public class CreateGroupResponse
         {
