@@ -26,21 +26,26 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
+                var propertyValue = "";
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
                 clientContext.ExecuteQuery();
 
-                // if (taxonomySession != null)
-                // {
-                //     TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
-                //     if (termStore != null)
-                //     {
-                //     }
-                // }
+                if (taxonomySession != null)
+                {
+                    TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
+                    if (termStore != null)
+                    {
+                        var term = termStore.GetTerm(request.TermGUID);
+                        clientContext.Load(term, t => t.LocalCustomProperties);
+                        clientContext.ExecuteQuery();
+                        propertyValue = term.LocalCustomProperties[request.PropertyName];
+                    }
+                }
                 var getTermPropertyResponse = new GetTermPropertyResponse
                 {
-                    PropertyValue = ""
+                    PropertyValue = propertyValue
                 };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -64,7 +69,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             [Required]
             [Display(Description = "Term GUID")]
-            public string TermGUID { get; set; }
+            public Guid TermGUID { get; set; }
 
             [Required]
             [Display(Description = "Property name")]
