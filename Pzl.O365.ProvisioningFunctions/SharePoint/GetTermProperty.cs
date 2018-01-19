@@ -9,7 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.SharePoint.Client;
-using Microsoft.SharePoint.Taxonomy;
+using Microsoft.SharePoint.Client.Taxonomy;
 using OfficeDevPnP.Core.Enums;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
@@ -65,6 +65,10 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             [Required]
             [Display(Description = "Term GUID")]
             public string TermGUID { get; set; }
+
+            [Required]
+            [Display(Description = "Property name")]
+            public string PropertyName { get; set; }
         }
 
         public class GetTermPropertyResponse
