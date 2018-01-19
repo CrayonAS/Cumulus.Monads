@@ -26,23 +26,15 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
-                var propertyValue = "";
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
                 clientContext.ExecuteQuery();
-
-                if (taxonomySession != null)
-                {
-                    TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
-                    if (termStore != null)
-                    {
-                        var term = termStore.GetTerm(request.TermGUID);
-                        clientContext.Load(term, t => t.LocalCustomProperties);
-                        clientContext.ExecuteQuery();
-                        propertyValue = term.LocalCustomProperties[request.PropertyName];
-                    }
-                }
+                TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();                 
+                var term = termStore.GetTerm(request.TermGUID);
+                clientContext.Load(term, t => t.LocalCustomProperties);
+                clientContext.ExecuteQuery();
+                var propertyValue = term.LocalCustomProperties[request.PropertyName];
                 var getTermPropertyResponse = new GetTermPropertyResponse
                 {
                     PropertyValue = propertyValue
