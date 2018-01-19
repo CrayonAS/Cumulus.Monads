@@ -34,8 +34,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 {
                     throw new ArgumentException("Parameter cannot be null", "Description");
                 }
-                string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix);
-                string displayName = GetDisplayName(request.Name, request.Prefix);
+                string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix, request.UsePrefixInMailAlias);
+                string displayName = GetDisplayName(request.Name, request.Prefix, request.UsePrefixInDisplayName);
                 GraphServiceClient client = ConnectADAL.GetGraphClient();
                 var newGroup = new Group
                 {
@@ -69,10 +69,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             }
         }
 
-        static string GetDisplayName(string name, string prefix)
+        static string GetDisplayName(string name, string prefix, bool usePrefix)
         {
             var displayName = name;
-            if (!string.IsNullOrWhiteSpace(prefix))
+            if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
             {
                 displayName = $"{prefix}: {displayName}";
             }
@@ -91,15 +91,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             }
         }
 
-        static async Task<string> GetUniqueMailAlias(string name, string prefix = "")
+        static async Task<string> GetUniqueMailAlias(string name, string prefix, bool usePrefix)
         {
             var mailNickname = Regex.Replace(name.ToLower(), @":?\s+", "", RegexOptions.IgnoreCase);
-            mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "");
-            if (string.IsNullOrWhiteSpace(prefix))
-            {
-                mailNickname = mailNickname.ToLower();
-            }
-            else
+            mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "").ToLower();
+            if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
             {
                 mailNickname = $"{prefix}-{mailNickname}".ToLower();
             }
@@ -151,7 +147,17 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Required]
             [Display(Description = "Should the group be public")]
             public bool Public { get; set; }
+
+            [Required]
+            [Display(Description = "Should prefix be used for DisplayName")]
+            public bool UsePrefixInDisplayName { get; set; }
+
+            [Required]
+            [Display(Description = "Should prefix be used for MailAlias")]
+            public bool UsePrefixInMailAlias { get; set; }
         }
+    }
+    }
 
         public class CreateGroupResponse
         {
