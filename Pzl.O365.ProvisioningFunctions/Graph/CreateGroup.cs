@@ -46,6 +46,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                     SecurityEnabled = false,
                     Visibility = request.Public ? "Public" : "Private",
                     GroupTypes = new List<string> { "Unified" },
+                    Classification = request.Classification
                 };
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
                 var createGroupResponse = new CreateGroupResponse
@@ -154,7 +155,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
             [Required]
             [Display(Description = "Should prefix be used for MailAlias")]
-            public bool UsePrefixInMailAlias { get; set; }           
+            public bool UsePrefixInMailAlias { get; set; }
+
+            [Display(Description = "Classification")]
+            public string Classification { get; set; }
         }
 
         public class CreateGroupResponse
