@@ -5,7 +5,9 @@ using System.Net.Http.Formatting;
 using System.Web.Http.Description;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -18,6 +20,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 {
     public static class CreateGroup
     {
+        private static readonly Regex ReRemoveNonAlphaNumChars = new Regex("[^a-z0-9]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         [FunctionName("CreateGroup")]
         [ResponseType(typeof(CreateGroupResponse))]
@@ -72,9 +75,13 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static string GetDisplayName(string name, string prefix, bool usePrefix)
         {
-            var displayName = name;
+            //remove prefix from name if accidentally added as part of the name
+            var displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+
             if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
             {
+                CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
+                prefix = cultureInfo.TextInfo.ToTitleCase(prefix);
                 displayName = $"{prefix}: {displayName}";
             }
             return displayName;
@@ -94,11 +101,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static async Task<string> GetUniqueMailAlias(string name, string prefix, bool usePrefix)
         {
-            var mailNickname = Regex.Replace(name.ToLower(), @":?\s+", "", RegexOptions.IgnoreCase);
-            mailNickname = Regex.Replace(mailNickname, "[^a-z0-9]", "").ToLower();
+            var mailNickname = ReRemoveNonAlphaNumChars.Replace(name, "").ToLower();
+            prefix = ReRemoveNonAlphaNumChars.Replace(prefix + "", "").ToLower();
+
             if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
             {
-                mailNickname = $"{prefix}-{mailNickname}".ToLower();
+                mailNickname = $"{prefix}-{mailNickname}";
             }
             if (string.IsNullOrWhiteSpace(mailNickname))
             {
@@ -138,7 +146,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Description of the group")]
             public string Description { get; set; }
 
-            [Display(Description = "Prefix for group display name")]
+            [Display(Description = "Prefix for group display name / e-mail address")]
             public string Prefix { get; set; }
 
             [Required]
@@ -150,11 +158,11 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             public bool Public { get; set; }
 
             [Required]
-            [Display(Description = "Should prefix be used for DisplayName")]
+            [Display(Description = "If prefix is set, use for DisplayName")]
             public bool UsePrefixInDisplayName { get; set; }
 
             [Required]
-            [Display(Description = "Should prefix be used for MailAlias")]
+            [Display(Description = "If prefix is set, use for EmailAlias")]
             public bool UsePrefixInMailAlias { get; set; }
 
             [Display(Description = "Classification")]
