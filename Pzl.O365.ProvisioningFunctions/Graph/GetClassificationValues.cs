@@ -13,7 +13,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
     public static class GetClassificationValues
     {
         [FunctionName("GetClassificationValues")]
-        [Display(Name = "Retreive classification values", Description = "Fetch the classification values defined on the tenant for Office 365 Groups")]
+        [Display(Name = "Retrieve classification values", Description = "Fetch the classification values defined on the tenant for Office 365 Groups")]
         public static async Task<GetClassificationValuesResponse> Run([HttpTrigger(AuthorizationLevel.Function, "get")]HttpRequestMessage req, TraceWriter log)
         {
             GraphServiceClient client = ConnectADAL.GetGraphClient();
