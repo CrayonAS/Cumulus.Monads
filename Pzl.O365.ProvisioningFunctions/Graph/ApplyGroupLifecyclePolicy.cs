@@ -26,6 +26,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             try
             {
                 string bearerToken = await ConnectADAL.GetBearerTokenServiceIdentity(log);
+                log.Info(bearerToken);
                 dynamic template = new { groupId = request.GroupId };
                 var content = new StringContent(JsonConvert.SerializeObject(template), Encoding.UTF8, "application/json");
                 Uri uri = new Uri($"https://graph.microsoft.com/beta/groupLifecyclePolicies/aa31e487-96a4-4a23-ae25-a5ba3e51e815/addGroup");
