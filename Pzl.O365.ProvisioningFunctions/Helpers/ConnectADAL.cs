@@ -187,9 +187,10 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             GraphServiceClient client = new GraphServiceClient(new DelegateAuthenticationProvider(
                 async (requestMessage) =>
                 {
-                    var info = await GetBearerTokenServiceIdentity(log);
-                    log.Info("Bearer: " + info.BearerToken);
-                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", info.BearerToken);
+                    //var bearerToken = await GetBearerTokenServiceIdentity(log);
+                    var bearerToken = await AzureServiceTokenProvider.GetAccessTokenAsync(GraphResourceId);
+                    log.Info("Bearer: " + bearerToken);
+                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
                 }));
             return client;
         }
@@ -200,38 +201,40 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             return accessToken;
         }
 
-        public static async Task<MsiInformation> GetBearerTokenServiceIdentity(TraceWriter log)
+        public static async Task<string> GetBearerTokenServiceIdentity(TraceWriter log)
         {
-            string apiVersion = "2017-09-01";
-            string tokenAuthUri = MsiEndpoint + $"?resource={GraphResourceId}&api-version={apiVersion}";
-            log.Info(tokenAuthUri);
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Secret", MsiSecret);
+            return await AzureServiceTokenProvider.GetAccessTokenAsync(GraphResourceId);
 
-            var response = await client.GetAsync(tokenAuthUri);
-            if (response.IsSuccessStatusCode)
-            {
-                string responseMsg = await response.Content.ReadAsStringAsync();
-                dynamic token = JsonConvert.DeserializeObject(responseMsg);
-                string bearer = token.access_token;
+            //string apiVersion = "2017-09-01";
+            //string tokenAuthUri = MsiEndpoint + $"?resource={GraphResourceId}&api-version={apiVersion}";
+            //log.Info(tokenAuthUri);
+            //HttpClient client = new HttpClient();
+            //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //client.DefaultRequestHeaders.TryAddWithoutValidation("Secret", MsiSecret);
 
-                var parts = bearer.Split('.');
-                var decoded = Convert.FromBase64String(parts[1]);
-                var part = Encoding.UTF8.GetString(decoded);
-                var jwt = JObject.Parse(part);
-                var ownerId = jwt["oid"].Value<string>();
+            //var response = await client.GetAsync(tokenAuthUri);
+            //if (response.IsSuccessStatusCode)
+            //{
+            //    string responseMsg = await response.Content.ReadAsStringAsync();
+            //    dynamic token = JsonConvert.DeserializeObject(responseMsg);
+            //    string bearer = token.access_token;
 
-                MsiInformation info = new MsiInformation
-                {
-                    OwnerId = ownerId,
-                    BearerToken = bearer
-                };
-                log.Info("Got token: " + bearer);
-                return info;
-            }
-            log.Info("No token");
-            return null;
+            //    var parts = bearer.Split('.');
+            //    var decoded = Convert.FromBase64String(parts[1]);
+            //    var part = Encoding.UTF8.GetString(decoded);
+            //    var jwt = JObject.Parse(part);
+            //    var ownerId = jwt["oid"].Value<string>();
+
+            //    MsiInformation info = new MsiInformation
+            //    {
+            //        OwnerId = ownerId,
+            //        BearerToken = bearer
+            //    };
+            //    log.Info("Got token: " + bearer);
+            //    return info;
+            //}
+            //log.Info("No token");
+            //return null;
         }
 
         private static ClientAssertionCertificate GetClientAssertionCertificate()
