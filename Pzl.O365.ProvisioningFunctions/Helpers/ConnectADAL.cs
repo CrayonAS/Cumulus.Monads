@@ -15,6 +15,7 @@ using Microsoft.Graph;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using HttpUtility = System.Web.HttpUtility;
 
 namespace Pzl.O365.ProvisioningFunctions.Helpers
 {
@@ -26,10 +27,11 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
         private static string _appSecret = Environment.GetEnvironmentVariable("ADALAppSecret");
         private static string _appCert = Environment.GetEnvironmentVariable("ADALAppCertificate");
         private static string _appCertKey = Environment.GetEnvironmentVariable("ADALAppCertificateKey");
+        private static string _tenantAdmin = Environment.GetEnvironmentVariable("TenantAdmin");
+        private static string _tenantPassword = Environment.GetEnvironmentVariable("TenantPassword");
+
         private static readonly string ADALDomain = Environment.GetEnvironmentVariable("ADALDomain");
         private static readonly Dictionary<string, AuthenticationResult> ResourceTokenLookup = new Dictionary<string, AuthenticationResult>();
-        private static readonly string MsiEndpoint = Environment.GetEnvironmentVariable("MSI_ENDPOINT");
-        private static readonly string MsiSecret = Environment.GetEnvironmentVariable("MSI_SECRET");
 
         private static readonly AzureServiceTokenProvider AzureServiceTokenProvider = new AzureServiceTokenProvider();
         private static readonly KeyVaultClient KvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(AzureServiceTokenProvider.KeyVaultTokenCallback));
@@ -52,25 +54,59 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             if (string.IsNullOrEmpty(_appSecret)) _appSecret = (await KvClient.GetSecretAsync(SecretUri("ADALAppSecret"))).Value;
             if (string.IsNullOrEmpty(_appCert)) _appCert = (await KvClient.GetSecretAsync(SecretUri("ADALAppCertificate"))).Value;
             if (string.IsNullOrEmpty(_appCertKey)) _appCertKey = (await KvClient.GetSecretAsync(SecretUri("ADALAppCertificateKey"))).Value;
+
+            try
+            {
+                if (string.IsNullOrEmpty(_tenantAdmin)) _tenantAdmin = (await KvClient.GetSecretAsync(SecretUri("TenantAdmin"))).Value;
+                if (string.IsNullOrEmpty(_tenantPassword)) _tenantPassword = (await KvClient.GetSecretAsync(SecretUri("TenantPassword"))).Value;
+            }
+            catch (Exception)
+            {
+                //silent catch if no admin/pw as this is needed only for lifecycle policy atm
+            }
         }
 
-        private static async Task<string> GetAccessToken(string AADDomain)
+        private static async Task<string> GetAccessToken(string AADDomain, bool useTenantAdmin = false)
         {
             await GetVariables();
-            AuthenticationResult token;
-            if (ResourceTokenLookup.TryGetValue(GraphResourceId, out token) &&
-                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow) return token.AccessToken;
+            AuthenticationResult token = null;
+            if (!useTenantAdmin && ResourceTokenLookup.TryGetValue(GraphResourceId, out token) &&
+                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow)
+            {
+                //Return cached token for ADAL app-only tokens
+                return token.AccessToken;
+            }
 
             var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
-            var clientCredential = new ClientCredential(_appId, _appSecret);
-
             bool keepRetry = false;
             do
             {
                 TimeSpan? delay = null;
                 try
                 {
-                    token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
+                    if (!useTenantAdmin)
+                    {
+                        var clientCredential = new ClientCredential(_appId, _appSecret);
+                        token = await authenticationContext.AcquireTokenAsync(GraphResourceId, clientCredential);
+                    }
+                    else
+                    {
+                        // Hack to get user token from a Web/API adal app - passing both username/password and client secret
+                        // Ref AADSTS70002 error
+                        Uri authUri = new Uri($"{ADALLogin}{ADALDomain}/oauth2/token");
+                        var contentString = $"resource={HttpUtility.UrlEncode(GraphResourceId)}&client_id={_appId}&client_secret={_appSecret}&grant_type=password&username={HttpUtility.UrlEncode(_tenantAdmin)}&password={HttpUtility.UrlEncode(_tenantPassword)}&scope=openid";
+                        var content = new StringContent(contentString, Encoding.UTF8, "application/x-www-form-urlencoded");
+                        HttpClient client = new HttpClient();
+                        var response = await client.PostAsync(authUri, content);
+
+                        string responseMsg = await response.Content.ReadAsStringAsync();
+                        if (response.IsSuccessStatusCode)
+                        {
+                            JObject tokendata = JsonConvert.DeserializeObject<JObject>(responseMsg);
+                            return tokendata["access_token"].ToString();
+                        }
+                        throw new Exception(responseMsg);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -187,51 +223,22 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             GraphServiceClient client = new GraphServiceClient(new DelegateAuthenticationProvider(
                 async (requestMessage) =>
                 {
-                    var info = await GetBearerTokenServiceIdentity(log);
-                    log.Info("Bearer: " + info.BearerToken);
-                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", info.BearerToken);
+                    //var bearerToken = await GetBearerTokenServiceIdentity(log);
+                    var bearerToken = await AzureServiceTokenProvider.GetAccessTokenAsync(GraphResourceId);
+                    log.Info("Bearer: " + bearerToken);
+                    requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
                 }));
             return client;
         }
 
-        public static async Task<string> GetBearerToken()
+        public static async Task<string> GetBearerToken(bool useTenantAdmin = false)
         {
-            string accessToken = await GetAccessToken(ADALDomain);
-            return accessToken;
+            return await GetAccessToken(ADALDomain, useTenantAdmin);
         }
 
-        public static async Task<MsiInformation> GetBearerTokenServiceIdentity(TraceWriter log)
+        public static async Task<string> GetBearerTokenServiceIdentity(TraceWriter log)
         {
-            string apiVersion = "2017-09-01";
-            string tokenAuthUri = MsiEndpoint + $"?resource={GraphResourceId}&api-version={apiVersion}";
-            log.Info(tokenAuthUri);
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Secret", MsiSecret);
-
-            var response = await client.GetAsync(tokenAuthUri);
-            if (response.IsSuccessStatusCode)
-            {
-                string responseMsg = await response.Content.ReadAsStringAsync();
-                dynamic token = JsonConvert.DeserializeObject(responseMsg);
-                string bearer = token.access_token;
-
-                var parts = bearer.Split('.');
-                var decoded = Convert.FromBase64String(parts[1]);
-                var part = Encoding.UTF8.GetString(decoded);
-                var jwt = JObject.Parse(part);
-                var ownerId = jwt["oid"].Value<string>();
-
-                MsiInformation info = new MsiInformation
-                {
-                    OwnerId = ownerId,
-                    BearerToken = bearer
-                };
-                log.Info("Got token: " + bearer);
-                return info;
-            }
-            log.Info("No token");
-            return null;
+            return await AzureServiceTokenProvider.GetAccessTokenAsync(GraphResourceId);
         }
 
         private static ClientAssertionCertificate GetClientAssertionCertificate()
