@@ -150,10 +150,6 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             public string Prefix { get; set; }
 
             [Required]
-            [Display(Description = "Group responsible")]
-            public string Responsible { get; set; }
-
-            [Required]
             [Display(Description = "Should the group be public")]
             public bool Public { get; set; }
 
