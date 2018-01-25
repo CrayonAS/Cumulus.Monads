@@ -19,6 +19,11 @@ using HttpUtility = System.Web.HttpUtility;
 
 namespace Pzl.O365.ProvisioningFunctions.Helpers
 {
+    enum GraphEndpoint
+    {
+        v1,
+        Beta
+    }
     class ConnectADAL
     {
         private static readonly Uri ADALLogin = new Uri("https://login.windows.net/");
@@ -207,9 +212,11 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             return token.AccessToken;
         }
 
-        public static GraphServiceClient GetGraphClient()
+        public static GraphServiceClient GetGraphClient(GraphEndpoint endPoint = GraphEndpoint.v1)
         {
-            GraphServiceClient client = new GraphServiceClient(new DelegateAuthenticationProvider(
+            var endpointUrl = endPoint == GraphEndpoint.v1 ? "https://graph.microsoft.com/v1.0" : "https://graph.microsoft.com/beta";
+
+            GraphServiceClient client = new GraphServiceClient(endpointUrl, new DelegateAuthenticationProvider(
                 async (requestMessage) =>
                 {
                     string accessToken = await GetAccessToken(ADALDomain);

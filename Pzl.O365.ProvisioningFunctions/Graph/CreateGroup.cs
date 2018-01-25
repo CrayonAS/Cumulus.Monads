@@ -39,7 +39,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 }
                 string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix, request.UsePrefixInMailAlias);
                 string displayName = GetDisplayName(request.Name, request.Prefix, request.UsePrefixInDisplayName);
-                GraphServiceClient client = ConnectADAL.GetGraphClient();
+                GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.Beta);
                 var newGroup = new Group
                 {
                     DisplayName = displayName,
