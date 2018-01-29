@@ -150,6 +150,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
 
         private static async Task<string> GetAccessTokenSharePoint(string AADDomain, string siteUrl, TraceWriter log = null)
         {
+            await GetVariables();
             //https://blogs.msdn.microsoft.com/richard_dizeregas_blog/2015/05/03/performing-app-only-operations-on-sharepoint-online-through-azure-ad/
             AuthenticationResult token;
             Uri uri = new Uri(siteUrl);
