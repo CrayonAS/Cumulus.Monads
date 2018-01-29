@@ -6,8 +6,9 @@
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="2.4.0-preview" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.1.0-preview" />
     <PackageReference Include="Microsoft.Graph" Version="1.7.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="3.18.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="3.19.0" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="1.0.7" />
+    <PackageReference Include="SharePointPnP.IdentityModel.Extensions" Version="1.2.3" />
     <PackageReference Include="SharePointPnPCoreOnline" Version="2.22.1801" />
   </ItemGroup>
   <ItemGroup>
