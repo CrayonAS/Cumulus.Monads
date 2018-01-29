@@ -76,7 +76,7 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             await GetVariables();
             AuthenticationResult token = null;
             if (!useTenantAdmin && ResourceTokenLookup.TryGetValue(GraphResourceId, out token) &&
-                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow)
+                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow.AddMinutes(-5))
             {
                 //Return cached token for ADAL app-only tokens
                 return token.AccessToken;
@@ -155,61 +155,62 @@ namespace Pzl.O365.ProvisioningFunctions.Helpers
             AuthenticationResult token;
             Uri uri = new Uri(siteUrl);
             string resourceUri = uri.Scheme + "://" + uri.Authority;
-            if (!ResourceTokenLookup.TryGetValue(resourceUri, out token) || token.ExpiresOn.UtcDateTime < DateTime.UtcNow)
+            if (ResourceTokenLookup.TryGetValue(resourceUri, out token) &&
+                token.ExpiresOn.UtcDateTime >= DateTime.UtcNow.AddMinutes(-5))
             {
-                if (token != null)
-                {
-                    log?.Info($"Token expired {token.ExpiresOn.UtcDateTime}");
-                }
-
-                var cac = GetClientAssertionCertificate();
-                var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
-
-                bool keepRetry = false;
-                do
-                {
-                    TimeSpan? delay = null;
-                    try
-                    {
-                        token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
-
-                        AdalServiceException serviceException;
-                        if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
-                        else serviceException = (AdalServiceException)ex.InnerException;
-                        if (serviceException.ErrorCode == "temporarily_unavailable")
-                        {
-                            RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
-                            if (retry.Delta.HasValue)
-                            {
-                                delay = retry.Delta;
-                            }
-                            else if (retry.Date.HasValue)
-                            {
-                                delay = retry.Date.Value.Offset;
-                            }
-                            if (delay.HasValue)
-                            {
-                                Thread.Sleep((int)delay.Value.TotalSeconds); // sleep or other
-                                keepRetry = true;
-                            }
-                        }
-                        else
-                        {
-                            throw;
-                        }
-                    }
-                } while (keepRetry);
-
-                //token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
-                ResourceTokenLookup[resourceUri] = token;
-
-                log?.Info($"Aquired token which expires {token.ExpiresOn.UtcDateTime}");
-
+                return token.AccessToken;
             }
+            if (token != null)
+            {
+                log?.Info($"Token expired {token.ExpiresOn.UtcDateTime}");
+            }
+
+            var cac = GetClientAssertionCertificate();
+            var authenticationContext = new AuthenticationContext(ADALLogin + AADDomain);
+
+            bool keepRetry = false;
+            do
+            {
+                TimeSpan? delay = null;
+                try
+                {
+                    token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
+                }
+                catch (Exception ex)
+                {
+                    if (!(ex is AdalServiceException) && !(ex.InnerException is AdalServiceException)) throw;
+
+                    AdalServiceException serviceException;
+                    if (ex is AdalServiceException) serviceException = (AdalServiceException)ex;
+                    else serviceException = (AdalServiceException)ex.InnerException;
+                    if (serviceException.ErrorCode == "temporarily_unavailable")
+                    {
+                        RetryConditionHeaderValue retry = serviceException.Headers.RetryAfter;
+                        if (retry.Delta.HasValue)
+                        {
+                            delay = retry.Delta;
+                        }
+                        else if (retry.Date.HasValue)
+                        {
+                            delay = retry.Date.Value.Offset;
+                        }
+                        if (delay.HasValue)
+                        {
+                            Thread.Sleep((int)delay.Value.TotalSeconds); // sleep or other
+                            keepRetry = true;
+                        }
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            } while (keepRetry);
+
+            //token = await authenticationContext.AcquireTokenAsync(resourceUri, cac);
+            ResourceTokenLookup[resourceUri] = token;
+
+            log?.Info($"Aquired token which expires {token.ExpiresOn.UtcDateTime}");
             return token.AccessToken;
         }
 
