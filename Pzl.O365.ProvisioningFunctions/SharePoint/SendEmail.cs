@@ -26,7 +26,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             {
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
-                MailUtility.SendEmail(clientContext, new[] { request.Recipient }, null, request.Subject, request.Content);
+                MailUtility.SendEmail(clientContext, request.Recipient.Split(';'), null, request.Subject, request.Content);
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -50,7 +50,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             public string SiteURL { get; set; }
 
             [Required]
-            [Display(Description = "E-mail of recipient")]
+            [Display(Description = "E-mail of recipients. Separate multiple with ;")]
             public string Recipient { get; set; }
 
             [Required]
