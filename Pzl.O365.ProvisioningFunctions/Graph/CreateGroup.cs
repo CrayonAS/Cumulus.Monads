@@ -74,12 +74,13 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
         }
 
         static string GetDisplayName(string name, string prefix, bool usePrefix)
-        {
-            //remove prefix from name if accidentally added as part of the name
-            var displayName = Regex.Replace(name, prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+        {            
+            var displayName = name;
 
             if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
             {
+                //remove prefix from name if accidentally added as part of the name
+                displayName = Regex.Replace(name, "^" + prefix + @":?\s+", "", RegexOptions.IgnoreCase);
                 CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
                 prefix = cultureInfo.TextInfo.ToTitleCase(prefix);
                 displayName = $"{prefix}: {displayName}";
