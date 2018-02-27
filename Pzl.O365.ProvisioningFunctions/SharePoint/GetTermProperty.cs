@@ -26,12 +26,24 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
+                if (string.IsNullOrWhiteSpace(request.SiteURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "SiteURL");
+                }
+                if (string.IsNullOrWhiteSpace(request.TermGUID))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "TermGUID");
+                }
+                if (string.IsNullOrWhiteSpace(request.PropertyName))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "PropertyName");
+                }
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
                 clientContext.ExecuteQuery();
                 TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();                 
-                var term = termStore.GetTerm(request.TermGUID);
+                var term = termStore.GetTerm(new Guid(request.TermGUID));
                 clientContext.Load(term, t => t.LocalCustomProperties);
                 clientContext.ExecuteQuery();
                 var propertyValue = term.LocalCustomProperties[request.PropertyName];
@@ -61,7 +73,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             [Required]
             [Display(Description = "Term GUID")]
-            public Guid TermGUID { get; set; }
+            public string TermGUID { get; set; }
 
             [Required]
             [Display(Description = "Property name")]
