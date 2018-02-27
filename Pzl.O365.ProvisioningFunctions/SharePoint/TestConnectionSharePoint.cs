@@ -16,12 +16,12 @@ using Pzl.O365.ProvisioningFunctions.Helpers;
 
 namespace Pzl.O365.ProvisioningFunctions.SharePoint
 {
-    public static class TestConnection
+    public static class TestConnectionSharePoint
     {
-        [FunctionName("TestConnection")]
-        [ResponseType(typeof(TestConnectionResponse))]
-        [Display(Name = "TestConnection", Description = "")]
-        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]TestConnectionRequest request, TraceWriter log)
+        [FunctionName("TestConnectionSharePointSharePoint")]
+        [ResponseType(typeof(TestConnectionSharePointResponse))]
+        [Display(Name = "TestConnectionSharePointSharePoint", Description = "")]
+        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]TestConnectionSharePointRequest request, TraceWriter log)
         {           
             try
             {
@@ -37,7 +37,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<TestConnectionResponse>(new TestConnectionResponse { WebTitle = web.Title }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<TestConnectionSharePointResponse>(new TestConnectionSharePointResponse { WebTitle = web.Title }, new JsonMediaTypeFormatter())
                 });
             }
             catch(ArgumentException ae)
@@ -64,14 +64,14 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             }
         }
 
-        public class TestConnectionRequest
+        public class TestConnectionSharePointRequest
         {
             [Required]
             [Display(Description = "URL of site")]
             public string SiteURL { get; set; }
         }
 
-        public class TestConnectionResponse
+        public class TestConnectionSharePointResponse
         {
             [Display(Description = "")]
             public string WebTitle { get; set; }
