@@ -38,6 +38,10 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 {
                     throw new ArgumentException("Parameter cannot be null", "PropertyName");
                 }
+                if (string.IsNullOrWhiteSpace(request.FallbackValue))
+                {
+                    request.FallbackValue = "";
+                }
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
@@ -56,12 +60,15 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     Content = new ObjectContent<GetTermPropertyResponse>(getTermPropertyResponse, new JsonMediaTypeFormatter())
                 });
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                log.Error($"Error: {e.Message }\n\n{e.StackTrace}");
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ExpectationFailed)
+                var getTermPropertyResponse = new GetTermPropertyResponse
                 {
-                    Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
+                    PropertyValue = request.FallbackValue
+                };
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ObjectContent<GetTermPropertyResponse>(getTermPropertyResponse, new JsonMediaTypeFormatter())
                 });
             }
         }
@@ -78,6 +85,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             [Required]
             [Display(Description = "Property name")]
             public string PropertyName { get; set; }
+
+            [Display(Description = "Fallback value")]
+            public string FallbackValue { get; set; }
         }
 
         public class GetTermPropertyResponse
