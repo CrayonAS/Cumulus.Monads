@@ -25,6 +25,15 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
+                if (string.IsNullOrWhiteSpace(request.SiteURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "SiteURL");
+                }
+                if (request.LanguageIds == null)
+                {
+                    throw new ArgumentException("Parameter cannot be null", "LanguageIds");
+                }
+
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
                 var web = clientContext.Web;

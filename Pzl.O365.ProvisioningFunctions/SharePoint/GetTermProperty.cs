@@ -26,12 +26,28 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
+                if (string.IsNullOrWhiteSpace(request.SiteURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "SiteURL");
+                }
+                if (string.IsNullOrWhiteSpace(request.TermGUID))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "TermGUID");
+                }
+                if (string.IsNullOrWhiteSpace(request.PropertyName))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "PropertyName");
+                }
+                if (string.IsNullOrWhiteSpace(request.FallbackValue))
+                {
+                    request.FallbackValue = "";
+                }
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
                 clientContext.ExecuteQuery();
                 TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();                 
-                var term = termStore.GetTerm(request.TermGUID);
+                var term = termStore.GetTerm(new Guid(request.TermGUID));
                 clientContext.Load(term, t => t.LocalCustomProperties);
                 clientContext.ExecuteQuery();
                 var propertyValue = term.LocalCustomProperties[request.PropertyName];
@@ -44,12 +60,15 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     Content = new ObjectContent<GetTermPropertyResponse>(getTermPropertyResponse, new JsonMediaTypeFormatter())
                 });
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                log.Error($"Error: {e.Message }\n\n{e.StackTrace}");
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ExpectationFailed)
+                var getTermPropertyResponse = new GetTermPropertyResponse
                 {
-                    Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
+                    PropertyValue = request.FallbackValue
+                };
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ObjectContent<GetTermPropertyResponse>(getTermPropertyResponse, new JsonMediaTypeFormatter())
                 });
             }
         }
@@ -61,11 +80,14 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             [Required]
             [Display(Description = "Term GUID")]
-            public Guid TermGUID { get; set; }
+            public string TermGUID { get; set; }
 
             [Required]
             [Display(Description = "Property name")]
             public string PropertyName { get; set; }
+
+            [Display(Description = "Fallback value")]
+            public string FallbackValue { get; set; }
         }
 
         public class GetTermPropertyResponse
