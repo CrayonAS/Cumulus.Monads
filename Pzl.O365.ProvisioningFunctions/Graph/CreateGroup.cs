@@ -37,8 +37,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                 {
                     throw new ArgumentException("Parameter cannot be null", "Description");
                 }
-                string mailNickName = await GetUniqueMailAlias(request.Name, request.Prefix, request.UsePrefixInMailAlias);
-                string displayName = GetDisplayName(request.Name, request.Prefix, request.UsePrefixInDisplayName);
+                string mailNickName = await GetUniqueMailAlias(request);
+                string displayName = GetDisplayName(request);
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.Beta);
                 var newGroup = new Group
                 {
@@ -73,42 +73,56 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             }
         }
 
-        static string GetDisplayName(string name, string prefix, bool usePrefix)
-        {            
-            var displayName = name;
+        static string GetDisplayName(CreateGroupRequest request)
+        {
+            string prefix = string.Empty;
+            string suffix = string.Empty;
+            var displayName = request.Name;
+            var prefixSeparator = string.Empty;
+            CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
 
-            if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
+            if (!string.IsNullOrWhiteSpace(request.Prefix) && request.UsePrefixInDisplayName)
             {
                 //remove prefix from name if accidentally added as part of the name
-                displayName = Regex.Replace(name, "^" + prefix + @":?\s+", "", RegexOptions.IgnoreCase);
-                CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
-                prefix = cultureInfo.TextInfo.ToTitleCase(prefix);
-                displayName = $"{prefix}: {displayName}";
+                displayName = Regex.Replace(displayName, "^" + request.Prefix + @":?\s+", "", RegexOptions.IgnoreCase);
+                prefix = cultureInfo.TextInfo.ToTitleCase(request.Prefix);
+                prefixSeparator = ":";
             }
+
+            if (!string.IsNullOrWhiteSpace(request.Suffix) && request.UseSuffixInDisplayName)
+            {
+                suffix = cultureInfo.TextInfo.ToTitleCase(request.Suffix);                
+            }
+            displayName = $"{prefix}{prefixSeparator} {displayName} {suffix}".Trim();
             return displayName;
         }
 
         static string GetDescription(string description, int maxLength)
         {
-            if (description.Length > maxLength)
-            {
-                return description.Substring(0, maxLength);
-            }
-            else
-            {
-                return description;
-            }
+            return description.Length > maxLength ? description.Substring(0, maxLength) : description;
         }
 
-        static async Task<string> GetUniqueMailAlias(string name, string prefix, bool usePrefix)
+        static async Task<string> GetUniqueMailAlias(CreateGroupRequest request)
         {
-            var mailNickname = ReRemoveNonAlphaNumChars.Replace(name, "").ToLower();
+            string name = request.Name;
+            string prefix = request.Prefix;
+            string suffix = request.Suffix;
+            string mailNickname = ReRemoveNonAlphaNumChars.Replace(name, "").ToLower();
             prefix = ReRemoveNonAlphaNumChars.Replace(prefix + "", "").ToLower();
+            suffix = ReRemoveNonAlphaNumChars.Replace(suffix + "", "").ToLower();
 
-            if (!string.IsNullOrWhiteSpace(prefix) && usePrefix)
+            string prefixSeparator = string.Empty;
+            if (!string.IsNullOrWhiteSpace(prefix) && request.UsePrefixInMailAlias)
             {
-                mailNickname = $"{prefix}-{mailNickname}";
+                prefixSeparator = string.IsNullOrWhiteSpace(request.PrefixSeparator) ? "-" : request.PrefixSeparator;                
             }
+            string suffixSeparator = string.Empty;
+            if (!string.IsNullOrWhiteSpace(suffix) && request.UseSuffixInMailAlias)
+            {
+                suffixSeparator = string.IsNullOrWhiteSpace(request.SuffixSeparator) ? "-" : request.SuffixSeparator;               
+            }
+            mailNickname = $"{prefix}{prefixSeparator}{mailNickname}{suffixSeparator}{suffix}";
+
             if (string.IsNullOrWhiteSpace(mailNickname))
             {
                 mailNickname = new Random().Next(0, 9).ToString();
@@ -150,17 +164,30 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Prefix for group display name / e-mail address")]
             public string Prefix { get; set; }
 
+            [Display(Description = "Separator character between prefix and name")]
+            public string PrefixSeparator { get; set; }
+
+            [Display(Description = "Suffix for group display name / e-mail address")]
+            public string Suffix { get; set; }
+
+            [Display(Description = "Separator character between suffix and name")]
+            public string SuffixSeparator { get; set; }
+
             [Required]
             [Display(Description = "Should the group be public")]
             public bool Public { get; set; }
 
-            [Required]
             [Display(Description = "If prefix is set, use for DisplayName")]
             public bool UsePrefixInDisplayName { get; set; }
 
-            [Required]
             [Display(Description = "If prefix is set, use for EmailAlias")]
             public bool UsePrefixInMailAlias { get; set; }
+
+            [Display(Description = "If suffix is set, use for EmailAlias")]
+            public bool UseSuffixInMailAlias { get; set; }
+
+            [Display(Description = "If suffix is set, use for DisplayName")]
+            public bool UseSuffixInDisplayName { get; set; }
 
             [Display(Description = "Classification")]
             public string Classification { get; set; }
