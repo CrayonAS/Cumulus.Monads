@@ -141,7 +141,16 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
                     .GetAsync();
                 if (groupExist.Count > 0)
                 {
-                    mailNickname += new Random().Next(0, 9).ToString();
+                    string number = new Random().Next(0, 9).ToString();                    
+                    if (string.IsNullOrWhiteSpace(suffixSeparator + suffix))
+                    {
+                        mailNickname += new Random().Next(0, 9).ToString();
+                    }
+                    else
+                    {
+                        int suffixIdx = mailNickname.IndexOf(suffixSeparator + suffix);
+                        mailNickname = mailNickname.Insert(suffixIdx, number);
+                    }
                 }
                 else
                 {
