@@ -19,7 +19,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
         [FunctionName("IsAppInstalled")]
         [ResponseType(typeof(IsAppInstalledResponse))]
         [Display(Name = "Check if an SP App is installed", Description = "Checks if an application is completely installed.")]
-        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]AddNavigationRequest request, TraceWriter log)
+        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]IsAppInstalledRequest request, TraceWriter log)
         {
             string siteUrl = request.SiteURL;
             try
@@ -50,7 +50,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             }
         }
 
-        public class AddNavigationRequest
+        public class IsAppInstalledRequest
         {
             [Required]
             [Display(Description = "URL of site")]
