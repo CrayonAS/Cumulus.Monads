@@ -121,16 +121,18 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             {
                 suffixSeparator = string.IsNullOrWhiteSpace(request.SuffixSeparator) ? "-" : request.SuffixSeparator;               
             }
+
+            int maxCharsInEmail = 40 - prefix.Length - prefixSeparator.Length - suffixSeparator.Length - suffix.Length;
+            if (mailNickname.Length > maxCharsInEmail)
+            {
+                mailNickname = mailNickname.Substring(0, maxCharsInEmail);
+            }
+
             mailNickname = $"{prefix}{prefixSeparator}{mailNickname}{suffixSeparator}{suffix}";
 
             if (string.IsNullOrWhiteSpace(mailNickname))
             {
                 mailNickname = new Random().Next(0, 9).ToString();
-            }
-            const int maxCharsInEmail = 40;
-            if (mailNickname.Length > maxCharsInEmail)
-            {
-                mailNickname = mailNickname.Substring(0, maxCharsInEmail);
             }
 
             GraphServiceClient client = ConnectADAL.GetGraphClient();
