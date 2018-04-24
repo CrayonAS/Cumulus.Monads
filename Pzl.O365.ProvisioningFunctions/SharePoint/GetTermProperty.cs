@@ -46,11 +46,24 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
                 clientContext.ExecuteQuery();
-                TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();                 
+                TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
                 var term = termStore.GetTerm(new Guid(request.TermGUID));
                 clientContext.Load(term, t => t.LocalCustomProperties);
                 clientContext.ExecuteQuery();
-                var propertyValue = term.LocalCustomProperties[request.PropertyName];
+                var propertyValue = "";
+                while (propertyValue == "")
+                {
+                    if (term.LocalCustomProperties.Keys.Contains(request.PropertyName))
+                    {
+                        propertyValue = term.LocalCustomProperties[request.PropertyName];
+                    }
+                    else
+                    {
+                        term = term.Parent;
+                        clientContext.Load(term, t => t.LocalCustomProperties);
+                        clientContext.ExecuteQuery();
+                    }
+                }
                 var getTermPropertyResponse = new GetTermPropertyResponse
                 {
                     PropertyValue = propertyValue
