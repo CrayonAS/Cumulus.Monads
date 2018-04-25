@@ -20,7 +20,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 {
     public static class CreateGroup
     {
-        private static readonly Regex ReRemoveNonAlphaNumChars = new Regex("[^a-z0-9]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex ReRemoveIllegalChars = new Regex("[^a-z0-9-.]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         [FunctionName("CreateGroup")]
         [ResponseType(typeof(CreateGroupResponse))]
@@ -107,9 +107,9 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             string name = string.IsNullOrEmpty(request.Alias) ? request.Name : request.Alias;
             string prefix = request.Prefix;
             string suffix = request.Suffix;
-            string mailNickname = ReRemoveNonAlphaNumChars.Replace(name, "").ToLower();
-            prefix = ReRemoveNonAlphaNumChars.Replace(prefix + "", "").ToLower();
-            suffix = ReRemoveNonAlphaNumChars.Replace(suffix + "", "").ToLower();
+            string mailNickname = ReRemoveIllegalChars.Replace(name, "").ToLower();
+            prefix = ReRemoveIllegalChars.Replace(prefix + "", "").ToLower();
+            suffix = ReRemoveIllegalChars.Replace(suffix + "", "").ToLower();
 
             string prefixSeparator = string.Empty;
             if (!string.IsNullOrWhiteSpace(prefix) && request.UsePrefixInMailAlias)
