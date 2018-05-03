@@ -50,7 +50,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     isDirty = true;
                 }
                 web.AssociatedMemberGroup.AllowMembersEditMembership = request.AllowMembersEditMembership;
-                web.Update();
+                web.AssociatedMemberGroup.Update();
 
                 if (request.RequestAccessEmail != null)
                 {
