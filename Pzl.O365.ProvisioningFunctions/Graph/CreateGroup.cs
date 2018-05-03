@@ -20,7 +20,7 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 {
     public static class CreateGroup
     {
-        private static readonly Regex ReRemoveNonAlphaNumChars = new Regex("[^a-z0-9]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex ReRemoveIllegalChars = new Regex("[^a-z0-9-.]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         [FunctionName("CreateGroup")]
         [ResponseType(typeof(CreateGroupResponse))]
@@ -104,11 +104,12 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static async Task<string> GetUniqueMailAlias(CreateGroupRequest request)
         {
+            string name = string.IsNullOrEmpty(request.Alias) ? request.Name : request.Alias;
             string prefix = request.Prefix;
             string suffix = request.Suffix;
-            string mailNickname = ReRemoveNonAlphaNumChars.Replace(!String.IsNullOrWhiteSpace(request.MailNickname) ? request.MailNickname : request.Name, "").ToLower();
-            prefix = ReRemoveNonAlphaNumChars.Replace(prefix + "", "").ToLower();
-            suffix = ReRemoveNonAlphaNumChars.Replace(suffix + "", "").ToLower();
+            string mailNickname = ReRemoveIllegalChars.Replace(name, "").ToLower();
+            prefix = ReRemoveIllegalChars.Replace(prefix + "", "").ToLower();
+            suffix = ReRemoveIllegalChars.Replace(suffix + "", "").ToLower();
 
             string prefixSeparator = string.Empty;
             if (!string.IsNullOrWhiteSpace(prefix) && request.UsePrefixInMailAlias)
@@ -167,9 +168,8 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Display(Description = "Name of the group")]
             public string Name { get; set; }
 
-            
-            [Display(Description = "MailNickname for the group")]
-            public string MailNickname { get; set; }
+            [Display(Description = "E-mail alias for the group")]
+            public string Alias { get; set; }
 
             [Required]
             [Display(Description = "Description of the group")]
