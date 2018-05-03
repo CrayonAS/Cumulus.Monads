@@ -104,10 +104,9 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
 
         static async Task<string> GetUniqueMailAlias(CreateGroupRequest request)
         {
-            string name = request.Name;
             string prefix = request.Prefix;
             string suffix = request.Suffix;
-            string mailNickname = ReRemoveNonAlphaNumChars.Replace(name, "").ToLower();
+            string mailNickname = ReRemoveNonAlphaNumChars.Replace(!String.IsNullOrWhiteSpace(request.MailNickname) ? request.MailNickname : request.Name, "").ToLower();
             prefix = ReRemoveNonAlphaNumChars.Replace(prefix + "", "").ToLower();
             suffix = ReRemoveNonAlphaNumChars.Replace(suffix + "", "").ToLower();
 
@@ -167,6 +166,10 @@ namespace Pzl.O365.ProvisioningFunctions.Graph
             [Required]
             [Display(Description = "Name of the group")]
             public string Name { get; set; }
+
+            
+            [Display(Description = "MailNickname for the group")]
+            public string MailNickname { get; set; }
 
             [Required]
             [Display(Description = "Description of the group")]
