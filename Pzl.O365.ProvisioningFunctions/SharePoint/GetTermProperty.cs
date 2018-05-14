@@ -8,6 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.SharePoint.Client;
 using Microsoft.SharePoint.Client.Taxonomy;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
@@ -43,11 +44,11 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 TaxonomySession taxonomySession = TaxonomySession.GetTaxonomySession(clientContext);
                 clientContext.Load(taxonomySession);
-                clientContext.ExecuteQuery();
+                clientContext.ExecuteQueryRetry();
                 TermStore termStore = taxonomySession.GetDefaultSiteCollectionTermStore();
                 var term = termStore.GetTerm(new Guid(request.TermGUID));
                 clientContext.Load(term, t => t.LocalCustomProperties);
-                clientContext.ExecuteQuery();
+                clientContext.ExecuteQueryRetry();
                 var propertyValue = string.Empty;
                 do
                 {
@@ -59,7 +60,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                     {
                         term = term.Parent;
                         clientContext.Load(term, t => t.LocalCustomProperties);
-                        clientContext.ExecuteQuery();
+                        clientContext.ExecuteQueryRetry();
                     }
 
                 } while (string.IsNullOrWhiteSpace(propertyValue));

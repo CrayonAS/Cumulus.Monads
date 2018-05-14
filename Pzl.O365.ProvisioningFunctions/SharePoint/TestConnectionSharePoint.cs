@@ -10,7 +10,6 @@ using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Online.SharePoint.TenantAdministration;
 using Microsoft.SharePoint.Client;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
@@ -33,7 +32,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var clientContext = await ConnectADAL.GetClientContext(request.SiteURL, log);
                 var web = clientContext.Web;
                 clientContext.Load(web);
-                clientContext.ExecuteQuery();
+                clientContext.ExecuteQueryRetry();
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
