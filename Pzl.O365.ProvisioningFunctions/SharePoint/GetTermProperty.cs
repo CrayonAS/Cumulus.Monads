@@ -8,9 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
-using Microsoft.SharePoint.Client;
 using Microsoft.SharePoint.Client.Taxonomy;
-using OfficeDevPnP.Core.Enums;
 using Pzl.O365.ProvisioningFunctions.Helpers;
 
 namespace Pzl.O365.ProvisioningFunctions.SharePoint
@@ -50,8 +48,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 var term = termStore.GetTerm(new Guid(request.TermGUID));
                 clientContext.Load(term, t => t.LocalCustomProperties);
                 clientContext.ExecuteQuery();
-                var propertyValue = "";
-                while (propertyValue == "")
+                var propertyValue = string.Empty;
+                do
                 {
                     if (term.LocalCustomProperties.Keys.Contains(request.PropertyName))
                     {
@@ -63,7 +61,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                         clientContext.Load(term, t => t.LocalCustomProperties);
                         clientContext.ExecuteQuery();
                     }
-                }
+
+                } while (string.IsNullOrWhiteSpace(propertyValue));
+
                 var getTermPropertyResponse = new GetTermPropertyResponse
                 {
                     PropertyValue = propertyValue
