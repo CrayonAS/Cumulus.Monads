@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
@@ -38,14 +37,15 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 var web = clientContext.Web;
                 web.Context.Load(web, w => w.Title);
-                web.Update();
                 web.Context.ExecuteQueryRetry();
 
                 var oldTitle = web.Title;
-
-                web.Title = request.Title;
-                web.Update();
-                web.Context.ExecuteQueryRetry();
+                if (oldTitle.Equals(request.Title))
+                {
+                    web.Title = request.Title;
+                    web.Update();
+                    web.Context.ExecuteQueryRetry();
+                }
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
