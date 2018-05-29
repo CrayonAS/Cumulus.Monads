@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Http.Description;
 using Microsoft.Azure.WebJobs;
@@ -36,8 +37,12 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
+                var regex = new Regex("[^a-zA-Z0-9 -]");
+                var cleanGroupName = regex.Replace(request.Group, "");
+                cleanGroupName = Regex.Replace(cleanGroupName, @"\s+", " ");
+
                 var web = clientContext.Web;
-                var group = web.SiteGroups.GetByName(request.Group);
+                var group = web.SiteGroups.GetByName(cleanGroupName);
                 clientContext.Load(group, g => g.Users);
                 web.Context.ExecuteQueryRetry();
 
@@ -46,7 +51,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<GetSharePointGroupUsersResponse>(new GetSharePointGroupUsersResponse { Emails = emails }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<GetSharePointGroupUsersResponse>(new GetSharePointGroupUsersResponse { Group = cleanGroupName, Emails = emails }, new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
@@ -70,8 +75,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             public string Group { get; set; }
         }
 
-        public class GetSharePointGroupUsersResponse
-        {
+        public class GetSharePointGroupUsersResponse { 
+            public string Group { get; set; }
             public string Emails { get; set; }
         }
     }
