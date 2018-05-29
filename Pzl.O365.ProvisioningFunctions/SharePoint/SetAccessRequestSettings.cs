@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
@@ -35,34 +34,33 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 var web = clientContext.Web;
                 clientContext.Load(web, w => w.MembersCanShare, w => w.AssociatedMemberGroup.AllowMembersEditMembership, w => w.RequestAccessEmail);
-                clientContext.ExecuteQuery();
-
+                clientContext.ExecuteQueryRetry();
 
                 if (request.MembersCanShare != web.MembersCanShare)
                 {
                     isDirty = true;
+                    web.MembersCanShare = request.MembersCanShare;
+                    web.Update();
                 }
-                web.MembersCanShare = request.MembersCanShare;
-                web.Update();
 
                 if (request.AllowMembersEditMembership != web.AssociatedMemberGroup.AllowMembersEditMembership)
                 {
                     isDirty = true;
+                    web.AssociatedMemberGroup.AllowMembersEditMembership = request.AllowMembersEditMembership;
+                    web.AssociatedMemberGroup.Update();
                 }
-                web.AssociatedMemberGroup.AllowMembersEditMembership = request.AllowMembersEditMembership;
-                web.AssociatedMemberGroup.Update();
 
-                if (request.RequestAccessEmail != null)
+                if (!string.IsNullOrWhiteSpace(request.RequestAccessEmail) && request.RequestAccessEmail != web.RequestAccessEmail)
                 {
-
-                    if (request.RequestAccessEmail != web.RequestAccessEmail)
-                    {
-                        isDirty = true;
-                    }
+                    isDirty = true;
                     web.RequestAccessEmail = request.RequestAccessEmail;
                     web.Update();
                 }
-                clientContext.ExecuteQuery();
+
+                if (isDirty)
+                {
+                    clientContext.ExecuteQueryRetry();
+                }
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
