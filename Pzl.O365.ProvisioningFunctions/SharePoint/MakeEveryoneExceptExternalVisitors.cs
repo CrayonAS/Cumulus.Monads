@@ -17,18 +17,18 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
     {
         [FunctionName("MakeEveryoneExceptExternalVisitors")]
         [ResponseType(typeof(MakeEveryoneExceptExternalVisitorsResponse))]
-        [Display(Name = "Move Everyone (except external) users from member to visitor", Description = "In a public group make everyone visitors and not contributors.")]
+        [Display(Name = "Make Everyone but external users visitor", Description = "")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]MakeEveryoneExceptExternalVisitorsRequest request, TraceWriter log)
         {
             string siteUrl = request.SiteURL;
 
             try
             {
-                bool moved = await MoveEveryoneUser(log, siteUrl);
+                bool everyOneExceptExternalAddedToVisitors = await MakeEveryoneVisitor(log, siteUrl);
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<MakeEveryoneExceptExternalVisitorsResponse>(new MakeEveryoneExceptExternalVisitorsResponse { EveryOneExceptExternalMoved = moved }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<MakeEveryoneExceptExternalVisitorsResponse>(new MakeEveryoneExceptExternalVisitorsResponse { EveryOneExceptExternalAddedToVisitors = everyOneExceptExternalAddedToVisitors }, new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
@@ -41,34 +41,33 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             }
         }
 
-        private static async Task<bool> MoveEveryoneUser(TraceWriter log, string siteUrl)
+        private static async Task<bool> MakeEveryoneVisitor(TraceWriter log, string siteUrl)
         {
             var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
             const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
-            bool moved = false;
+            bool everyOneExceptExternalAddedToVisitors = false;
 
             var web = clientContext.Web;
-            var membersGroup = web.AssociatedMemberGroup;
-            var siteUsers = web.SiteUsers;
             var visitorsGroup = web.AssociatedVisitorGroup;
+            var siteUsers = web.SiteUsers;
 
-            clientContext.Load(siteUsers);
-            clientContext.Load(membersGroup);
             clientContext.Load(visitorsGroup);
+            clientContext.Load(siteUsers);
             clientContext.ExecuteQueryRetry();
+
             foreach (User user in siteUsers)
             {
-                if (!user.LoginName.StartsWith(everyoneIdent)) continue;
-
-                if (web.IsUserInGroup(membersGroup.Title, user.LoginName))
+                if (user.LoginName.StartsWith(everyoneIdent))
                 {
-                    web.RemoveUserFromGroup(membersGroup, user);
-                    web.AddUserToGroup(visitorsGroup, user);
-                    moved = true;
+                    if(!web.IsUserInGroup(visitorsGroup.Title, user.LoginName))
+                    {
+                        web.AddUserToGroup(visitorsGroup, user);
+                        everyOneExceptExternalAddedToVisitors = true;
+                    }
                 }
-                break;
             }
-            return moved;
+            
+            return everyOneExceptExternalAddedToVisitors;
         }
 
         public class MakeEveryoneExceptExternalVisitorsRequest
@@ -80,8 +79,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
         public class MakeEveryoneExceptExternalVisitorsResponse
         {
-            [Display(Description = "Everyone group was moved from member to visitor")]
-            public bool EveryOneExceptExternalMoved { get; set; }
+            [Display(Description = "Everyone but external users was added to visitor group")]
+            public bool EveryOneExceptExternalAddedToVisitors { get; set; }
         }
     }
 }
