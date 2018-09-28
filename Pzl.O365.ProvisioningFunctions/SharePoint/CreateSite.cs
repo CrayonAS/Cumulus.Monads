@@ -27,9 +27,9 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
             try
             {
-                var clientContext = await ConnectADAL.GetClientContext(adminUrl, log);
-                Tenant tenant = new Tenant(clientContext);
-                clientContext.ExecuteQuery();
+                var adminContext = await ConnectADAL.GetClientContext(adminUrl, log);
+                Tenant tenant = new Tenant(adminContext);
+                adminContext.ExecuteQuery();
                 string url = $"https://{request.Tenant}.sharepoint.com/sites/{request.Url}";
                 var siteCreationProperties = new SiteCreationProperties()
                 {
@@ -42,7 +42,7 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
 
                 };
                 tenant.CreateSite(siteCreationProperties);
-                clientContext.ExecuteQuery();
+                adminContext.ExecuteQuery();
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -74,10 +74,6 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
             public string Description { get; set; }
             [Display(Description = "OwnerEmail ")]
             public string OwnerEmail { get; set; }
-            [Display(Description = "Classification ")]
-            public string Classification { get; set; }
-            [Display(Description = "IsPublic   ")]
-            public bool IsPublic { get; set; }
         }
 
         public class CreateSiteResponse
