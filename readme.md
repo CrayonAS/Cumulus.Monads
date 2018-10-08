@@ -180,10 +180,6 @@ Refresh the connections, pick the operation named _GetclassificationvaluesGet_ a
 
 ![img](images/test-connection.png)
 
-### 2.5       Flow
-
-todo
-
 
 
 
