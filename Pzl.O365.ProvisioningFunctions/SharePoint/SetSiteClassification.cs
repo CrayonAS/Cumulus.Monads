@@ -34,7 +34,8 @@ namespace Pzl.O365.ProvisioningFunctions.SharePoint
                 }
 
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
-                clientContext.Site.SetSiteClassification(request.SiteClassification);
+                //clientContext.Site.SetSiteClassification(request.SiteClassification);
+                clientContext.Site.Classification = request.SiteClassification;
                 clientContext.ExecuteQueryRetry();
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
