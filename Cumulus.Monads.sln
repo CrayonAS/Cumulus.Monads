@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Pzl.O365.ProvisioningFunctions", "Pzl.O365.ProvisioningFunctions\Pzl.O365.ProvisioningFunctions.csproj", "{035B555D-BB54-4B90-AD99-205526AFE1A4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cumulus.Monads", "Cumulus.Monads\Cumulus.Monads.csproj", "{035B555D-BB54-4B90-AD99-205526AFE1A4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
