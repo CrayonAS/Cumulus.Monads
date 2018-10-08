@@ -1,9 +1,4 @@
-# Puzzlepart Office 365 Azure Functions 
-
-Version: 1
-Contributors: Mikael Svenson
-
-
+# Cumulus Monads 
 
 # 1       Architecture
 
