@@ -40,6 +40,15 @@ namespace Cumulus.Monads.SharePoint
             RedirectAssembly();
             try
             {
+                if (string.IsNullOrWhiteSpace(request.SiteURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "SiteURL");
+                }
+                if (string.IsNullOrWhiteSpace(request.TemplateURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "TemplateURL");
+                }
+
                 string templateUrl = request.TemplateURL.Trim(); // remove potential spaces/line breaks
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
