@@ -31,6 +31,11 @@ namespace Cumulus.Monads.SharePoint
 
             try
             {
+                if (string.IsNullOrWhiteSpace(request.SiteURL))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "SiteURL");
+                }
+
                 var clientContext = await ConnectADAL.GetClientContext(adminUrl, log);
 
                 Tenant tenant = new Tenant(clientContext);
