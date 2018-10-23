@@ -13,6 +13,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Host;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Cumulus.Monads.Helpers;
 
 namespace Cumulus.Monads.Graph
@@ -32,9 +33,6 @@ namespace Cumulus.Monads.Graph
                 }
 
                 dynamic team = new ExpandoObject();
-                //((IDictionary<string, object>)team).Add("owner", request.GroupId);
-                //((IDictionary<string, object>)team).Add("title", request.Title);
-
                 var content = new StringContent(JsonConvert.SerializeObject(team), Encoding.UTF8, "application/json");
                 log.Info(JsonConvert.SerializeObject(team));
                 Uri uri = new Uri($"https://graph.microsoft.com/beta/groups/{request.GroupId}/team");
@@ -45,9 +43,11 @@ namespace Cumulus.Monads.Graph
                 var response = await client.PutAsync(uri, content);
                 if (response.IsSuccessStatusCode)
                 {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    dynamic responseJson = JObject.Parse(responseBody);
                     return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                     {
-                        Content = new ObjectContent<CreateTeamResponse>(new CreateTeamResponse { Created = true }, new JsonMediaTypeFormatter())
+                        Content = new ObjectContent<CreateTeamResponse>(new CreateTeamResponse { Created = true, TeamUrl = responseJson.webUrl }, new JsonMediaTypeFormatter())
                     });
                 }
                 string responseMsg = await response.Content.ReadAsStringAsync();
@@ -69,6 +69,12 @@ namespace Cumulus.Monads.Graph
             }
         }
 
+        public class PutTeamResponse
+        {
+            public string id { get; set; }
+            public string webId { get; set; }
+        }
+
 
         public class CreateTeamRequest
         {
@@ -81,6 +87,8 @@ namespace Cumulus.Monads.Graph
         {
             [Display(Description = "True/false if created")]
             public bool Created { get; set; }
+            [Display(Description = "Team URL")]
+            public string TeamUrl { get; set; }
             [Display(Description = "Error message if applicable")]
             public string ErrorMessage { get; set; }
         }
