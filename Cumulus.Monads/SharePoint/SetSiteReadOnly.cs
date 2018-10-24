@@ -42,13 +42,21 @@ namespace Cumulus.Monads.SharePoint
                 var associatedMemberGroup = web.AssociatedMemberGroup;
                 var associatedOwnerGroup = web.AssociatedOwnerGroup;
 
+                const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
+
                 clientContext.Load(siteUsers);
                 clientContext.Load(associatedVisitorGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedMemberGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
-                foreach(var user in associatedMemberGroup.Users)
+                foreach (var user in associatedVisitorGroup.Users)
+                {
+                    log.Info($"Removing {user.LoginName} from AssociatedVisitorGroup");
+                    web.RemoveUserFromGroup(associatedVisitorGroup, user);
+                }
+
+                foreach (var user in associatedMemberGroup.Users)
                 {
                     log.Info($"Removing {user.LoginName} from AssociatedMemberGroup");
                     web.RemoveUserFromGroup(associatedMemberGroup, user);
@@ -62,9 +70,18 @@ namespace Cumulus.Monads.SharePoint
 
                 clientContext.ExecuteQueryRetry();
 
-                log.Info($"Adding {request.Owner} from AssociatedOwnerGroup");
+                log.Info($"Adding {request.Owner} to AssociatedOwnerGroup");
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
                 clientContext.ExecuteQueryRetry();
+
+                foreach (User user in siteUsers)
+                {
+                    if (user.LoginName.StartsWith(everyoneIdent))
+                    {
+                        log.Info($"Adding {user.LoginName} to AssociatedVisitorGroup");
+                        web.AddUserToGroup(associatedVisitorGroup, user);
+                    }
+                }
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
