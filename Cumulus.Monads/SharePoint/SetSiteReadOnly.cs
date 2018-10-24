@@ -72,17 +72,17 @@ namespace Cumulus.Monads.SharePoint
 
                 log.Info($"Adding {request.Owner} to AssociatedOwnerGroup");
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
-                clientContext.ExecuteQueryRetry();
 
                 foreach (User user in siteUsers)
                 {
-                    log.Info($"Site User: {user.LoginName}");
                     if (user.LoginName.StartsWith(everyoneIdent))
                     {
                         log.Info($"Adding {user.LoginName} to AssociatedVisitorGroup");
                         web.AddUserToGroup(associatedVisitorGroup, user);
                     }
                 }
+
+                clientContext.ExecuteQueryRetry();
 
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
