@@ -23,8 +23,6 @@ namespace Cumulus.Monads.SharePoint
         [Display(Name = "Set the site to read-only", Description = "")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]SetSiteReadOnlyRequest request, TraceWriter log)
         {
-            string siteUrl = request.SiteURL;
-
             try
             {
                 if (string.IsNullOrWhiteSpace(request.SiteURL))
@@ -36,7 +34,7 @@ namespace Cumulus.Monads.SharePoint
                     throw new ArgumentException("Parameter cannot be null", "Owner");
                 }
 
-                var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
+                var clientContext = await ConnectADAL.GetClientContext(request.SiteURL, log);
                 var web = clientContext.Web;
                 var webProperties = web.AllProperties;
                 var siteUsers = web.SiteUsers;
@@ -83,7 +81,7 @@ namespace Cumulus.Monads.SharePoint
 
                 if (webProperties.IsPropertyAvailable("GroupType") && webProperties["GroupType"].ToString().Equals("Private"))
                 {
-                    log.Info($"Adding existing members/owners to ${associatedVisitorGroup.Title}");
+                    log.Info($"The site is connected to a private group. Adding existing members/owners to ${associatedVisitorGroup.Title}");
                     for (var i = visitors.Count - 1; i >= 0; i--)
                     {
                         log.Info($"Adding {visitors[i].LoginName} to ${associatedVisitorGroup.Title}");
@@ -111,6 +109,7 @@ namespace Cumulus.Monads.SharePoint
             }
             catch (Exception e)
             {
+                log.Info(e.StackTrace);
                 log.Error($"Error: {e.Message }\n\n{e.StackTrace}");
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
                 {
