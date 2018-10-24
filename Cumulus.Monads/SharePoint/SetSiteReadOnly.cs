@@ -12,6 +12,7 @@ using Microsoft.Azure.WebJobs.Host;
 using Microsoft.SharePoint.Client;
 using Cumulus.Monads.Helpers;
 using Microsoft.SharePoint.Client.InformationPolicy;
+using System.Collections.Generic;
 
 namespace Cumulus.Monads.SharePoint
 {
@@ -37,6 +38,7 @@ namespace Cumulus.Monads.SharePoint
 
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
                 var web = clientContext.Web;
+                var webProperties = web.AllProperties;
                 var siteUsers = web.SiteUsers;
                 var associatedVisitorGroup = web.AssociatedVisitorGroup;
                 var associatedMemberGroup = web.AssociatedMemberGroup;
@@ -44,28 +46,33 @@ namespace Cumulus.Monads.SharePoint
 
                 const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
 
+                clientContext.Load(webProperties);
                 clientContext.Load(siteUsers);
                 clientContext.Load(associatedVisitorGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedMemberGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
+                var visitors = new List<User>();
+
                 for(var i = associatedVisitorGroup.Users.Count -1; i >= 0; i--)
                 {
-                    log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from AssociatedVisitorGroup");
+                    log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from ${associatedVisitorGroup.Title}");
                     web.RemoveUserFromGroup(associatedVisitorGroup, associatedVisitorGroup.Users[i]);
                 }
 
                 for (var i = associatedMemberGroup.Users.Count - 1; i >= 0; i--)
                 {
-                    log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from AssociatedMemberGroup");
+                    log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from ${associatedMemberGroup.Title}");
                     web.RemoveUserFromGroup(associatedMemberGroup, associatedMemberGroup.Users[i]);
+                    visitors.Add(associatedMemberGroup.Users[i]);
                 }
 
                 for (var i = associatedOwnerGroup.Users.Count - 1; i >= 0; i--)
                 {
-                    log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from AssociatedOwnerGroup");
+                    log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from ${associatedOwnerGroup.Title}");
                     web.RemoveUserFromGroup(associatedOwnerGroup, associatedOwnerGroup.Users[i]);
+                    visitors.Add(associatedOwnerGroup.Users[i]);
                 }
 
                 clientContext.ExecuteQueryRetry();
@@ -73,12 +80,25 @@ namespace Cumulus.Monads.SharePoint
                 log.Info($"Adding {request.Owner} to AssociatedOwnerGroup");
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
 
-                foreach (User user in siteUsers)
+
+                if (webProperties.IsPropertyAvailable("GroupType") && webProperties["GroupType"].ToString().Equals("Private"))
                 {
-                    if (user.LoginName.StartsWith(everyoneIdent))
+                    log.Info($"Adding existing members/owners to ${associatedVisitorGroup.Title}");
+                    for (var i = visitors.Count - 1; i >= 0; i--)
                     {
-                        log.Info($"Adding {user.LoginName} to AssociatedVisitorGroup");
-                        web.AddUserToGroup(associatedVisitorGroup, user);
+                        log.Info($"Adding {visitors[i].LoginName} to ${associatedVisitorGroup.Title}");
+                        web.AddUserToGroup(associatedVisitorGroup, visitors[i]);
+                    }
+                }
+                else
+                {
+                    foreach (User user in siteUsers)
+                    {
+                        if (user.LoginName.StartsWith(everyoneIdent))
+                        {
+                            log.Info($"Adding {user.LoginName} to ${associatedVisitorGroup.Title}");
+                            web.AddUserToGroup(associatedVisitorGroup, user);
+                        }
                     }
                 }
 
