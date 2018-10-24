@@ -48,18 +48,21 @@ namespace Cumulus.Monads.SharePoint
                 clientContext.Load(associatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
-                foreach(User user in associatedMemberGroup.Users)
+                foreach(var user in associatedMemberGroup.Users)
                 {
+                    log.Info($"Removing {user.LoginName} from AssociatedMemberGroup");
                     web.RemoveUserFromGroup(associatedMemberGroup, user);
                 }
 
-                foreach(User user in associatedOwnerGroup.Users)
+                foreach(var user in associatedOwnerGroup.Users)
                 {
+                    log.Info($"Removing {user.LoginName} from AssociatedOwnerGroup");
                     web.RemoveUserFromGroup(associatedOwnerGroup, user);
                 }
 
                 clientContext.ExecuteQueryRetry();
 
+                log.Info($"Adding {request.Owner} from AssociatedOwnerGroup");
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
                 clientContext.ExecuteQueryRetry();
 
