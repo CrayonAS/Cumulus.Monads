@@ -84,6 +84,7 @@ namespace Cumulus.Monads.SharePoint
                 {
                     try
                     {
+                        log.Info($"Collection: associatedOwnerGroup.Users,  Count: {associatedOwnerGroup.Users.Count}, Index: {i}");
                         log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from {associatedOwnerGroup.Title}");
                         web.RemoveUserFromGroup(associatedOwnerGroup, associatedOwnerGroup.Users[i]);
                         visitors.Add(associatedOwnerGroup.Users[i]);
