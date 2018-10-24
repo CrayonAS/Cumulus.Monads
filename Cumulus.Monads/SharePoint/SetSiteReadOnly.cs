@@ -53,21 +53,24 @@ namespace Cumulus.Monads.SharePoint
 
                 var visitors = new List<User>();
 
-                for(var i = associatedVisitorGroup.Users.Count -1; i >= 0; i--)
+                for(var i = (associatedVisitorGroup.Users.Count -1) ; i >= 0; i--)
                 {
+                    log.Info($"AssociatedVisitorGroup: i: {i}, count: {associatedVisitorGroup.Users.Count}");
                     log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from ${associatedVisitorGroup.Title}");
                     web.RemoveUserFromGroup(associatedVisitorGroup, associatedVisitorGroup.Users[i]);
                 }
 
-                for (var i = associatedMemberGroup.Users.Count - 1; i >= 0; i--)
+                for (var i = (associatedMemberGroup.Users.Count - 1) ; i >= 0; i--)
                 {
+                    log.Info($"AssociatedMemberGroup: i: {i}, count: {associatedMemberGroup.Users.Count}");
                     log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from ${associatedMemberGroup.Title}");
                     web.RemoveUserFromGroup(associatedMemberGroup, associatedMemberGroup.Users[i]);
                     visitors.Add(associatedMemberGroup.Users[i]);
                 }
 
-                for (var i = associatedOwnerGroup.Users.Count - 1; i >= 0; i--)
+                for (var i = (associatedOwnerGroup.Users.Count - 1); i >= 0; i--)
                 {
+                    log.Info($"AssociatedOwnerGroup: i: {i}, count: {associatedOwnerGroup.Users.Count}");
                     log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from ${associatedOwnerGroup.Title}");
                     web.RemoveUserFromGroup(associatedOwnerGroup, associatedOwnerGroup.Users[i]);
                     visitors.Add(associatedOwnerGroup.Users[i]);
@@ -79,10 +82,11 @@ namespace Cumulus.Monads.SharePoint
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
 
 
+
                 if (webProperties.IsPropertyAvailable("GroupType") && webProperties["GroupType"].ToString().Equals("Private"))
                 {
                     log.Info($"The site is connected to a private group. Adding existing members/owners to ${associatedVisitorGroup.Title}");
-                    for (var i = visitors.Count - 1; i >= 0; i--)
+                    for (var i = (visitors.Count - 1); i >= 0; i--)
                     {
                         log.Info($"Adding {visitors[i].LoginName} to ${associatedVisitorGroup.Title}");
                         web.AddUserToGroup(associatedVisitorGroup, visitors[i]);
