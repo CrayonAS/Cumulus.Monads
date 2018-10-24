@@ -57,7 +57,7 @@ namespace Cumulus.Monads.SharePoint
 
                 var visitorsPrivate = new List<User>();
 
-                for (var i = (visitors.Count - 1); i >= 0; i--)
+                for (var i = 0; i < visitors.Count; i--)
                 {
                     try
                     {
@@ -70,7 +70,7 @@ namespace Cumulus.Monads.SharePoint
                     }
                 }
 
-                for (var i = (members.Count - 1); i >= 0; i--)
+                for (var i = 0; i < members.Count; i--)
                 {
                     try
                     {
@@ -84,7 +84,7 @@ namespace Cumulus.Monads.SharePoint
                     }
                 }
 
-                for (var i = (owners.Count - 1); i >= 0; i--)
+                for (var i = 0; i < owners.Count; i--)
                 {
                     try
                     {
