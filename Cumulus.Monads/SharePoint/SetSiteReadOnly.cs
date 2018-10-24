@@ -63,7 +63,7 @@ namespace Cumulus.Monads.SharePoint
                     }
                     catch (ArgumentOutOfRangeException e)
                     {
-                        log.Info($"Message: {e.Message}, Count: {associatedVisitorGroup.Users.Count}, Index: {i}");
+                        log.Info($"Message: {e.Message}, Collection: associatedVisitorGroup.Users,  Count: {associatedVisitorGroup.Users.Count}, Index: {i}");
                     }
                 }
 
@@ -78,7 +78,7 @@ namespace Cumulus.Monads.SharePoint
                     }
                     catch (ArgumentOutOfRangeException e)
                     {
-                        log.Info($"Message: {e.Message}, Count: {associatedMemberGroup.Users.Count}, Index: {i}");
+                        log.Info($"Message: {e.Message}, Collection: associatedMemberGroup.Users,  Count: {associatedMemberGroup.Users.Count}, Index: {i}");
                     }
                 }
 
@@ -92,7 +92,7 @@ namespace Cumulus.Monads.SharePoint
                     }
                     catch (ArgumentOutOfRangeException e)
                     {
-                        log.Info($"Message: {e.Message}, Count: {associatedOwnerGroup.Users.Count}, Index: {i}");
+                        log.Info($"Message: {e.Message}, Collection: associatedOwnerGroup.Users,  Count: {associatedOwnerGroup.Users.Count}, Index: {i}");
                     }
                 }
 
