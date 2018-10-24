@@ -57,8 +57,7 @@ namespace Cumulus.Monads.SharePoint
                 {
                     try
                     {
-                        log.Info($"AssociatedVisitorGroup: i: {i}, count: {associatedVisitorGroup.Users.Count}");
-                        log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from ${associatedVisitorGroup.Title}");
+                        log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from {associatedVisitorGroup.Title}");
                         web.RemoveUserFromGroup(associatedVisitorGroup, associatedVisitorGroup.Users[i]);
                     }
                     catch (ArgumentOutOfRangeException e)
@@ -71,8 +70,7 @@ namespace Cumulus.Monads.SharePoint
                 {
                     try
                     {
-                        log.Info($"AssociatedMemberGroup: i: {i}, count: {associatedMemberGroup.Users.Count}");
-                        log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from ${associatedMemberGroup.Title}");
+                        log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from {associatedMemberGroup.Title}");
                         web.RemoveUserFromGroup(associatedMemberGroup, associatedMemberGroup.Users[i]);
                         visitors.Add(associatedMemberGroup.Users[i]);
                     }
@@ -86,7 +84,7 @@ namespace Cumulus.Monads.SharePoint
                 {
                     try
                     {
-                        log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from ${associatedOwnerGroup.Title}");
+                        log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from {associatedOwnerGroup.Title}");
                         web.RemoveUserFromGroup(associatedOwnerGroup, associatedOwnerGroup.Users[i]);
                         visitors.Add(associatedOwnerGroup.Users[i]);
                     }
@@ -98,17 +96,16 @@ namespace Cumulus.Monads.SharePoint
 
                 clientContext.ExecuteQueryRetry();
 
-                log.Info($"Adding {request.Owner} to AssociatedOwnerGroup");
+                log.Info($"Adding {request.Owner} to {associatedOwnerGroup.Title}");
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
 
 
-
-                if (webProperties.IsPropertyAvailable("GroupType") && webProperties["GroupType"].ToString().Equals("Private"))
+                if (webProperties.FieldValues.ContainsKey("GroupType") && webProperties.FieldValues["GroupType"].ToString().Equals("Private"))
                 {
-                    log.Info($"The site is connected to a private group. Adding existing members/owners to ${associatedVisitorGroup.Title}");
+                    log.Info($"The site is connected to a private group. Adding existing members/owners to {associatedVisitorGroup.Title}");
                     for (var i = (visitors.Count - 1); i >= 0; i--)
                     {
-                        log.Info($"Adding {visitors[i].LoginName} to ${associatedVisitorGroup.Title}");
+                        log.Info($"Adding {visitors[i].LoginName} to {associatedVisitorGroup.Title}");
                         web.AddUserToGroup(associatedVisitorGroup, visitors[i]);
                     }
                 }
@@ -118,7 +115,7 @@ namespace Cumulus.Monads.SharePoint
                     {
                         if (user.LoginName.StartsWith(everyoneIdent))
                         {
-                            log.Info($"Adding {user.LoginName} to ${associatedVisitorGroup.Title}");
+                            log.Info($"Adding {user.LoginName} to {associatedVisitorGroup.Title}");
                             web.AddUserToGroup(associatedVisitorGroup, user);
                         }
                     }
