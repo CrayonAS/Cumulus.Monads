@@ -50,22 +50,22 @@ namespace Cumulus.Monads.SharePoint
                 clientContext.Load(associatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
-                foreach (var user in associatedVisitorGroup.Users)
+                for(var i = associatedVisitorGroup.Users.Count -1; i >= 0; i--)
                 {
-                    log.Info($"Removing {user.LoginName} from AssociatedVisitorGroup");
-                    web.RemoveUserFromGroup(associatedVisitorGroup, user);
+                    log.Info($"Removing {associatedVisitorGroup.Users[i].LoginName} from AssociatedVisitorGroup");
+                    web.RemoveUserFromGroup(associatedVisitorGroup, associatedVisitorGroup.Users[i]);
                 }
 
-                foreach (var user in associatedMemberGroup.Users)
+                for (var i = associatedMemberGroup.Users.Count - 1; i >= 0; i--)
                 {
-                    log.Info($"Removing {user.LoginName} from AssociatedMemberGroup");
-                    web.RemoveUserFromGroup(associatedMemberGroup, user);
+                    log.Info($"Removing {associatedMemberGroup.Users[i].LoginName} from AssociatedMemberGroup");
+                    web.RemoveUserFromGroup(associatedMemberGroup, associatedMemberGroup.Users[i]);
                 }
 
-                foreach(var user in associatedOwnerGroup.Users)
+                for (var i = associatedOwnerGroup.Users.Count - 1; i >= 0; i--)
                 {
-                    log.Info($"Removing {user.LoginName} from AssociatedOwnerGroup");
-                    web.RemoveUserFromGroup(associatedOwnerGroup, user);
+                    log.Info($"Removing {associatedOwnerGroup.Users[i].LoginName} from AssociatedOwnerGroup");
+                    web.RemoveUserFromGroup(associatedOwnerGroup, associatedOwnerGroup.Users[i]);
                 }
 
                 clientContext.ExecuteQueryRetry();
@@ -76,6 +76,7 @@ namespace Cumulus.Monads.SharePoint
 
                 foreach (User user in siteUsers)
                 {
+                    log.Info($"Site User: {user.LoginName}");
                     if (user.LoginName.StartsWith(everyoneIdent))
                     {
                         log.Info($"Adding {user.LoginName} to AssociatedVisitorGroup");
