@@ -59,44 +59,22 @@ namespace Cumulus.Monads.SharePoint
 
                 for (var i = 0; i < visitors.Count; i--)
                 {
-                    try
-                    {
-                        log.Info($"Removing {visitors[i].LoginName} from {associatedVisitorGroup.Title}");
-                        web.RemoveUserFromGroup(associatedVisitorGroup, visitors[i]);
-                    }
-                    catch (ArgumentOutOfRangeException e)
-                    {
-                        log.Info($"Message: {e.Message}, Collection: avisitors,  Count: {visitors.Count}, Index: {i}");
-                    }
+                    log.Info($"Removing {visitors[i].LoginName} from {associatedVisitorGroup.Title}");
+                    web.RemoveUserFromGroup(associatedVisitorGroup, visitors[i]);
                 }
 
                 for (var i = 0; i < members.Count; i--)
                 {
-                    try
-                    {
-                        log.Info($"Removing {members[i].LoginName} from {associatedMemberGroup.Title}");
-                        web.RemoveUserFromGroup(associatedMemberGroup, members[i]);
-                        visitorsPrivate.Add(members[i]);
-                    }
-                    catch (ArgumentOutOfRangeException e)
-                    {
-                        log.Info($"Message: {e.Message}, Collection: members,  Count: {members.Count}, Index: {i}");
-                    }
+                    log.Info($"Removing {members[i].LoginName} from {associatedMemberGroup.Title}");
+                    web.RemoveUserFromGroup(associatedMemberGroup, members[i]);
+                    visitorsPrivate.Add(members[i]);
                 }
 
                 for (var i = 0; i < owners.Count; i--)
                 {
-                    try
-                    {
-                        log.Info($"Collection: owners,  Count: {owners.Count}, Index: {i}");
-                        log.Info($"Removing {owners[i].LoginName} from {associatedOwnerGroup.Title}");
-                        web.RemoveUserFromGroup(associatedOwnerGroup, owners[i]);
-                        visitorsPrivate.Add(owners[i]);
-                    }
-                    catch (ArgumentOutOfRangeException e)
-                    {
-                        log.Info($"Message: {e.Message}, Collection: owners,  Count: {owners.Count}, Index: {i}");
-                    }
+                    log.Info($"Removing {owners[i].LoginName} from {associatedOwnerGroup.Title}");
+                    web.RemoveUserFromGroup(associatedOwnerGroup, owners[i]);
+                    visitorsPrivate.Add(owners[i]);
                 }
 
                 clientContext.ExecuteQueryRetry();
@@ -107,11 +85,19 @@ namespace Cumulus.Monads.SharePoint
 
                 if (webProperties.FieldValues.ContainsKey("GroupType") && webProperties.FieldValues["GroupType"].ToString().Equals("Private"))
                 {
-                    log.Info($"The site is connected to a private group. Adding existing members/owners to {associatedVisitorGroup.Title}");
+                    log.Info($"The site is connected to a private group. Adding existing members/owners to {associatedVisitorGroup.Title}.");
                     for (var i = (visitorsPrivate.Count - 1); i >= 0; i--)
                     {
-                        log.Info($"Adding {visitorsPrivate[i].LoginName} to {associatedVisitorGroup.Title}");
-                        web.AddUserToGroup(associatedVisitorGroup, visitorsPrivate[i]);
+                        var user = visitorsPrivate[i];
+                        if (user.LoginName.Contains("#ext#") && request.RemoveExternalUsers)
+                        {
+                            log.Info($"{user.LoginName} is an external user and will not be added to visitors.");
+                        }
+                        else
+                        {
+                            log.Info($"Adding {user.LoginName} to {associatedVisitorGroup.Title}.");
+                            web.AddUserToGroup(associatedVisitorGroup, user);
+                        }
                     }
                 }
                 else
@@ -152,6 +138,9 @@ namespace Cumulus.Monads.SharePoint
             [Required]
             [Display(Description = "Owner")]
             public string Owner { get; set; }
+            [Required]
+            [Display(Description = "Remove external users")]
+            public bool RemoveExternalUsers { get; set; }
         }
 
         public class SetSiteReadOnlyResponse
