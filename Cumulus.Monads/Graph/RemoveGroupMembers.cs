@@ -22,11 +22,6 @@ namespace Cumulus.Monads.Graph
 {
     public static class RemoveGroupMembers
     {
-        public static string ToDebugString<TKey, TValue>(this IDictionary<TKey, TValue> dictionary)
-        {
-            return "{" + string.Join(",", dictionary.Select(kv => kv.Key + "=" + kv.Value).ToArray()) + "}";
-        }
-
         [FunctionName("RemoveGroupMembers")]
         [ResponseType(typeof(RemoveGroupMembersResponse))]
         [Display(Name = "Remove group members", Description = "")]
@@ -40,26 +35,37 @@ namespace Cumulus.Monads.Graph
                 }
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.v1);
                 var group = client.Groups[request.GroupId];
-                var unifiedMembership = new List<List<Group>>();
                 var members = await group.Members.Request().Select("displayName, id, mail, userPrincipalName, userType").GetAsync();
-                for (int i = 0; i < members.Count; i++)
+                var users = members.CurrentPage.Where(p => p.GetType() == typeof(User)).Cast<User>().ToList();
+
+                // Removing users from group members
+                for (int i = 0; i < users.Count; i++)
                 {
-                    var member = members[i];
-                    log.Info($"Removing user {member.Id} from group {request.GroupId}");
-                    await group.Members[member.Id].Reference.Request().DeleteAsync();
+                    var user = users[i];
+                    log.Info($"Removing user {user.Id} from group {request.GroupId}");
+                    await group.Members[user.Id].Reference.Request().DeleteAsync();
                 }
-                for (int i = 0; i < members.Count; i++)
+
+
+                var removedGuestUsers = new List<User>();
+
+                // Removes guest users
+                for (int i = 0; i < users.Count; i++)
                 {
-                    var member = members[i];
-                    log.Info(ToDebugString(member.AdditionalData));
-                    log.Info($"Retrieving memberOf for user {member.Id}");
-                    var memberOfPage = await client.Users[member.Id].MemberOf.Request().GetAsync();
+                    var user = users[i];
+                    log.Info($"Retrieving unified membership for user {user.Id}");
+                    var memberOfPage = await client.Users[user.Id].MemberOf.Request().GetAsync();
                     var unifiedGroups = memberOfPage.CurrentPage.Where(p => p.GetType() == typeof(Group)).Cast<Group>().ToList().Where(g => g.GroupTypes.Contains("Unified")).ToList();
-                    unifiedMembership.Add(unifiedGroups);
+                    if(request.RemoveGuestUsers && user.UserType.Equals("Guest") && unifiedGroups.Count == 0)
+                    {
+                        log.Info($"Removing guest user {user.Id}");
+                        await client.Users[user.Id].Request().DeleteAsync();
+                        removedGuestUsers.Add(user);
+                    }
                 }
                 var removeGroupMembersResponse = new RemoveGroupMembersResponse {
-                    RemovedMembers = members,
-                    UnifiedMembership = unifiedMembership,
+                    RemovedMembers = users,
+                    RemovedGuestUsers = removedGuestUsers
                 };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -76,18 +82,31 @@ namespace Cumulus.Monads.Graph
             }
         }
 
+        public static async Task RemoveUsersFromGroup(string groupId, IGroupRequestBuilder group, List<User> users, TraceWriter log)
+        {
+            for (int i = 0; i < users.Count; i++)
+            {
+                var user = users[i];
+                log.Info($"Removing user {user.Id} from group {groupId}");
+                await group.Members[user.Id].Reference.Request().DeleteAsync();
+            }
+        }
+
         public class RemoveGroupMembersRequest
         {
             [Required]
             [Display(Description = "Id of the Office 365 Group")]
             public string GroupId { get; set; }
+            [Display(Description = "Should guest users with no remaining Unified membership be removed from AD")]
+            public bool RemoveGuestUsers { get; set; }
         }
 
         public class RemoveGroupMembersResponse
         {
-            [Display(Description = "True/false if members was removed")]
-            public IGroupMembersCollectionWithReferencesPage RemovedMembers { get; set; }
-            public List<List<Group>> UnifiedMembership { get; set; }
+            [Display(Description = "List of removed members")]
+            public List<User> RemovedMembers { get; set; }
+            [Display(Description = "List of removed guest users")]
+            public List<User> RemovedGuestUsers { get; set; }
         }
     }
 }
