@@ -40,7 +40,7 @@ namespace Cumulus.Monads.Graph
                 }
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.v1);
                 var group = client.Groups[request.GroupId];
-                var memberOf = new List<IUserMemberOfCollectionWithReferencesPage>();
+                var unifiedMembership = new List<List<Group>>();
                 var members = await group.Members.Request().GetAsync();
                 for (int i = 0; i < members.Count; i++)
                 {
@@ -54,11 +54,12 @@ namespace Cumulus.Monads.Graph
                     log.Info(ToDebugString(member.AdditionalData));
                     log.Info($"Retrieving memberOf for user {member.Id}");
                     var memberOfPage = await client.Users[member.Id].MemberOf.Request().GetAsync();
-                    memberOf.Add(memberOfPage);
+                    var unifiedGroups = memberOfPage.CurrentPage.Where(p => p.GetType() == typeof(Group)).Cast<Group>().ToList().Where(g => g.GroupTypes.Contains("Unified")).ToList();
+                    unifiedMembership.Add(unifiedGroups);
                 }
                 var removeGroupMembersResponse = new RemoveGroupMembersResponse {
                     RemovedMembers = members,
-                    MemberOf = memberOf,
+                    UnifiedMembership = unifiedMembership,
                 };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -86,7 +87,7 @@ namespace Cumulus.Monads.Graph
         {
             [Display(Description = "True/false if members was removed")]
             public IGroupMembersCollectionWithReferencesPage RemovedMembers { get; set; }
-            public List<IUserMemberOfCollectionWithReferencesPage> MemberOf { get; set; }
+            public List<List<Group>> UnifiedMembership { get; set; }
         }
     }
 }
