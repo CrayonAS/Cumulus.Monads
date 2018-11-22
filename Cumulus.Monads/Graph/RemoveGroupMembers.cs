@@ -22,6 +22,11 @@ namespace Cumulus.Monads.Graph
 {
     public static class RemoveGroupMembers
     {
+        public static string ToDebugString<TKey, TValue>(this IDictionary<TKey, TValue> dictionary)
+        {
+            return "{" + string.Join(",", dictionary.Select(kv => kv.Key + "=" + kv.Value).ToArray()) + "}";
+        }
+
         [FunctionName("RemoveGroupMembers")]
         [ResponseType(typeof(RemoveGroupMembersResponse))]
         [Display(Name = "Remove group members", Description = "")]
@@ -46,7 +51,8 @@ namespace Cumulus.Monads.Graph
                 for (int i = 0; i < members.Count; i++)
                 {
                     var member = members[i];
-                    log.Info($"Retrieving memberOf for user {member.AdditionalData["displayName"]}");
+                    log.Info(ToDebugString(member.AdditionalData));
+                    log.Info($"Retrieving memberOf for user {member.Id}");
                     var memberOfPage = await client.Users[member.Id].MemberOf.Request().GetAsync();
                     memberOf.Add(memberOfPage);
                 }
