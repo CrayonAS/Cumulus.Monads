@@ -29,6 +29,10 @@ namespace Cumulus.Monads.Graph
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.GroupId))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "GroupId");
+                }
                 GraphServiceClient client = ConnectADAL.GetGraphClient();
                 var group = client.Groups[request.GroupId];
                 var members = await group.Members.Request().GetAsync();
