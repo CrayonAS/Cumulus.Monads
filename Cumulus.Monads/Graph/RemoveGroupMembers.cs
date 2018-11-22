@@ -35,14 +35,25 @@ namespace Cumulus.Monads.Graph
                 }
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.v1);
                 var group = client.Groups[request.GroupId];
-                var members = await group.Members.Request().Expand("MemberOf").GetAsync();
+                var memberOf = new List<IUserMemberOfCollectionWithReferencesPage>();
+                var members = await group.Members.Request().GetAsync();
                 for (int i = 0; i < members.Count; i++)
                 {
                     var member = members[i];
                     log.Info($"Removing user {member.Id} from group {request.GroupId}");
                     await group.Members[member.Id].Reference.Request().DeleteAsync();
                 }
-                var removeGroupMembersResponse = new RemoveGroupMembersResponse { RemovedMembers = members };
+                for (int i = 0; i < members.Count; i++)
+                {
+                    var member = members[i];
+                    log.Info($"Retrieving memberOf for user {member.AdditionalData["displayName"]}");
+                    var memberOfPage = await client.Users[member.Id].MemberOf.Request().GetAsync();
+                    memberOf.Add(memberOfPage);
+                }
+                var removeGroupMembersResponse = new RemoveGroupMembersResponse {
+                    RemovedMembers = members,
+                    MemberOf = memberOf,
+                };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new ObjectContent<RemoveGroupMembersResponse>(removeGroupMembersResponse, new JsonMediaTypeFormatter())
@@ -69,6 +80,7 @@ namespace Cumulus.Monads.Graph
         {
             [Display(Description = "True/false if members was removed")]
             public IGroupMembersCollectionWithReferencesPage RemovedMembers { get; set; }
+            public List<IUserMemberOfCollectionWithReferencesPage> MemberOf { get; set; }
         }
     }
 }
