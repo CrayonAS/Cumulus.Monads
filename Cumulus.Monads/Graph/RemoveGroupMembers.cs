@@ -35,7 +35,7 @@ namespace Cumulus.Monads.Graph
                 }
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.v1);
                 var group = client.Groups[request.GroupId];
-                var members = await group.Members.Request().Select("Id,DisplayName,Mail").GetAsync();
+                var members = await group.Members.Request().Expand("MemberOf").GetAsync();
                 for (int i = 0; i < members.Count; i++)
                 {
                     var member = members[i];
