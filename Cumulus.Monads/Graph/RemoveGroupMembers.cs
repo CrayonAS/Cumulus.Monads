@@ -20,6 +20,13 @@ using Microsoft.Graph;
 
 namespace Cumulus.Monads.Graph
 {
+    public class GroupUser
+    {
+        public string Id { get; set; }
+        public string UserType { get; set; }
+        public string Mail { get; set; }
+    }
+
     public static class RemoveGroupMembers
     {
         [FunctionName("RemoveGroupMembers")]
@@ -36,7 +43,15 @@ namespace Cumulus.Monads.Graph
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.v1);
                 var group = client.Groups[request.GroupId];
                 var members = await group.Members.Request().Select("displayName, id, mail, userPrincipalName, userType").GetAsync();
-                var users = members.CurrentPage.Where(p => p.GetType() == typeof(User)).Cast<User>().ToList();
+
+                var users = new List<GroupUser>();
+                var removedGuestUsers = new List<GroupUser>();
+
+                foreach (var u in members.CurrentPage.Where(p => p.GetType() == typeof(User)).Cast<User>().ToList())
+                {
+                    users.Add(new GroupUser() { Id = u.Id, UserType = u.UserType, Mail = u.Mail });
+                }
+
 
                 // Removing users from group members
                 for (int i = 0; i < users.Count; i++)
@@ -45,9 +60,6 @@ namespace Cumulus.Monads.Graph
                     log.Info($"Removing user {user.Id} from group {request.GroupId}");
                     await group.Members[user.Id].Reference.Request().DeleteAsync();
                 }
-
-
-                var removedGuestUsers = new List<User>();
 
                 // Removes guest users
                 for (int i = 0; i < users.Count; i++)
@@ -104,9 +116,9 @@ namespace Cumulus.Monads.Graph
         public class RemoveGroupMembersResponse
         {
             [Display(Description = "List of removed members")]
-            public List<User> RemovedMembers { get; set; }
+            public List<GroupUser> RemovedMembers { get; set; }
             [Display(Description = "List of removed guest users")]
-            public List<User> RemovedGuestUsers { get; set; }
+            public List<GroupUser> RemovedGuestUsers { get; set; }
         }
     }
 }
