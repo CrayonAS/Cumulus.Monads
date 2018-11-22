@@ -53,6 +53,9 @@ namespace Cumulus.Monads.Graph
                 }
 
 
+                var guestUsers = users.Where(u => u.UserType.Equals("Guest")).ToList();
+
+
                 // Removing users from group members
                 for (int i = 0; i < users.Count; i++)
                 {
@@ -62,23 +65,25 @@ namespace Cumulus.Monads.Graph
                 }
 
                 // Removes guest users
-                for (int i = 0; i < users.Count; i++)
+                for (int i = 0; i < guestUsers.Count; i++)
                 {
-                    var user = users[i];
-                    log.Info($"Retrieving unified membership for user {user.Id}");
-                    var memberOfPage = await client.Users[user.Id].MemberOf.Request().GetAsync();
+                    var guestUser = guestUsers[i];
+                    log.Info($"Retrieving unified membership for user {guestUser.Id}");
+                    var memberOfPage = await client.Users[guestUser.Id].MemberOf.Request().GetAsync();
                     var unifiedGroups = memberOfPage.CurrentPage.Where(p => p.GetType() == typeof(Group)).Cast<Group>().ToList().Where(g => g.GroupTypes.Contains("Unified")).ToList();
-                    if(request.RemoveGuestUsers && user.UserType.Equals("Guest") && unifiedGroups.Count == 0)
+                    if(request.RemoveGuestUsers && unifiedGroups.Count == 0)
                     {
-                        log.Info($"Removing guest user {user.Id}");
-                        await client.Users[user.Id].Request().DeleteAsync();
-                        removedGuestUsers.Add(user);
+                        log.Info($"Removing guest user {guestUser.Id}");
+                        await client.Users[guestUser.Id].Request().DeleteAsync();
+                        removedGuestUsers.Add(guestUser);
                     }
                 }
+
                 var removeGroupMembersResponse = new RemoveGroupMembersResponse {
                     RemovedMembers = users,
                     RemovedGuestUsers = removedGuestUsers
                 };
+
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new ObjectContent<RemoveGroupMembersResponse>(removeGroupMembersResponse, new JsonMediaTypeFormatter())
