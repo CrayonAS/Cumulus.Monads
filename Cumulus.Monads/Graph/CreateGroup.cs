@@ -60,15 +60,15 @@ namespace Cumulus.Monads.Graph
                 };
                 try
                 {
-                    if (request.AllowToAddGuests != null)
+                    if (!request.AllowToAddGuests)
                     {
                         var groupUnifiedGuestSetting = new GroupSetting()
                         {
                             DisplayName = "Group.Unified.Guest",
                             TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
-                            Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = request.AllowToAddGuests.ToString() } }
+                            Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = "false" } }
                         };
-                        log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = {request.AllowToAddGuests.ToString()}");
+                        log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = false");
                         await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
                     }
                 }
@@ -224,8 +224,8 @@ namespace Cumulus.Monads.Graph
             [Display(Description = "Classification")]
             public string Classification { get; set; }
 
-            [Display(Description = "Classification")]
-            public bool? AllowToAddGuests { get; set; }
+            [Display(Description = "AllowToAddGuests")]
+            public bool AllowToAddGuests { get; set; }
         }
 
         public class CreateGroupResponse
