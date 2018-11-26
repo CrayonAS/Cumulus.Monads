@@ -58,17 +58,24 @@ namespace Cumulus.Monads.Graph
                     DisplayName = displayName,
                     Mail = addedGroup.Mail
                 };
-                //if (request.AllowToAddGuests != null)
-                //{
-                //    var groupUnifiedGuestSetting = new GroupSetting()
-                //    {
-                //        DisplayName = "Group.Unified.Guest",
-                //        TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
-                //        Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = request.AllowToAddGuests.ToString() } }
-                //    };
-                //    log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = {request.AllowToAddGuests.ToString()}");
-                //    await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
-                //}
+                try
+                {
+                    if (request.AllowToAddGuests != null)
+                    {
+                        var groupUnifiedGuestSetting = new GroupSetting()
+                        {
+                            DisplayName = "Group.Unified.Guest",
+                            TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
+                            Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = request.AllowToAddGuests.ToString() } }
+                        };
+                        log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = {request.AllowToAddGuests.ToString()}");
+                        await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.Error($"Error setting AllowToAddGuests for group {addedGroup.Id}: {e.Message }\n\n{e.StackTrace}");
+                }
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
@@ -102,7 +109,7 @@ namespace Cumulus.Monads.Graph
 
             if (!string.IsNullOrWhiteSpace(request.Suffix) && request.UseSuffixInDisplayName)
             {
-                suffix = cultureInfo.TextInfo.ToTitleCase(request.Suffix);                
+                suffix = cultureInfo.TextInfo.ToTitleCase(request.Suffix);
             }
             displayName = $"{prefix}{prefixSeparator} {displayName} {suffix}".Trim();
             return displayName;
@@ -125,12 +132,12 @@ namespace Cumulus.Monads.Graph
             string prefixSeparator = string.Empty;
             if (!string.IsNullOrWhiteSpace(prefix) && request.UsePrefixInMailAlias)
             {
-                prefixSeparator = string.IsNullOrWhiteSpace(request.PrefixSeparator) ? "-" : request.PrefixSeparator;                
+                prefixSeparator = string.IsNullOrWhiteSpace(request.PrefixSeparator) ? "-" : request.PrefixSeparator;
             }
             string suffixSeparator = string.Empty;
             if (!string.IsNullOrWhiteSpace(suffix) && request.UseSuffixInMailAlias)
             {
-                suffixSeparator = string.IsNullOrWhiteSpace(request.SuffixSeparator) ? "-" : request.SuffixSeparator;               
+                suffixSeparator = string.IsNullOrWhiteSpace(request.SuffixSeparator) ? "-" : request.SuffixSeparator;
             }
 
             int maxCharsInEmail = 40 - prefix.Length - prefixSeparator.Length - suffixSeparator.Length - suffix.Length;
@@ -154,7 +161,7 @@ namespace Cumulus.Monads.Graph
                     .GetAsync();
                 if (groupExist.Count > 0)
                 {
-                    string number = new Random().Next(0, 9).ToString();                    
+                    string number = new Random().Next(0, 9).ToString();
                     if (string.IsNullOrWhiteSpace(suffixSeparator + suffix))
                     {
                         mailNickname += new Random().Next(0, 9).ToString();
