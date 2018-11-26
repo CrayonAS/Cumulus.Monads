@@ -38,8 +38,8 @@ namespace Cumulus.Monads.SharePoint
                     Template = "STS#3",
                     StorageMaximumLevel = 100,
                     UserCodeMaximumLevel = 0,
-                    Title = request.Title
-
+                    Title = request.Title,
+                   Lcid = request.Language,
                 };
                 tenant.CreateSite(siteCreationProperties);
                 adminContext.ExecuteQuery();
@@ -74,6 +74,8 @@ namespace Cumulus.Monads.SharePoint
             public string Description { get; set; }
             [Display(Description = "OwnerEmail ")]
             public string OwnerEmail { get; set; }
+            [Display(Description = "Language ")]
+            public uint Language { get; set; }
         }
 
         public class CreateSiteResponse
