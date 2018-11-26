@@ -59,21 +59,30 @@ namespace Cumulus.Monads.SharePoint
 
                 for (var i = 0; i < visitors.Count; i--)
                 {
-                    log.Info($"Removing {visitors[i].LoginName} from {associatedVisitorGroup.Title}");
-                    web.RemoveUserFromGroup(associatedVisitorGroup, visitors[i]);
+                    if (request.RemoveVisitors)
+                    {
+                        log.Info($"Removing {visitors[i].LoginName} from {associatedVisitorGroup.Title}");
+                        web.RemoveUserFromGroup(associatedVisitorGroup, visitors[i]);
+                    }
                 }
 
                 for (var i = 0; i < members.Count; i--)
                 {
-                    log.Info($"Removing {members[i].LoginName} from {associatedMemberGroup.Title}");
-                    web.RemoveUserFromGroup(associatedMemberGroup, members[i]);
+                    if (request.RemoveMembers)
+                    {
+                        log.Info($"Removing {members[i].LoginName} from {associatedMemberGroup.Title}");
+                        web.RemoveUserFromGroup(associatedMemberGroup, members[i]);
+                    }
                     visitorsPrivate.Add(members[i]);
                 }
 
                 for (var i = 0; i < owners.Count; i--)
                 {
-                    log.Info($"Removing {owners[i].LoginName} from {associatedOwnerGroup.Title}");
-                    web.RemoveUserFromGroup(associatedOwnerGroup, owners[i]);
+                    if (request.RemoveOwners)
+                    {
+                        log.Info($"Removing {owners[i].LoginName} from {associatedOwnerGroup.Title}");
+                        web.RemoveUserFromGroup(associatedOwnerGroup, owners[i]);
+                    }
                     visitorsPrivate.Add(owners[i]);
                 }
 
@@ -141,6 +150,15 @@ namespace Cumulus.Monads.SharePoint
             [Required]
             [Display(Description = "Remove external users")]
             public bool RemoveExternalUsers { get; set; }
+            [Required]
+            [Display(Description = "Remove users from members group")]
+            public bool RemoveMembers { get; set; }
+            [Required]
+            [Display(Description = "Remove users from owners group")]
+            public bool RemoveOwners { get; set; }
+            [Required]
+            [Display(Description = "Remove users from visitors group")]
+            public bool RemoveVisitors { get; set; }
         }
 
         public class SetSiteReadOnlyResponse
