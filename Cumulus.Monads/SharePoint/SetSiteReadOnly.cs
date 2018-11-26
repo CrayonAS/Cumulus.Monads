@@ -50,6 +50,11 @@ namespace Cumulus.Monads.SharePoint
                 var members = web.AssociatedMemberGroup.Users;
                 var owners = web.AssociatedOwnerGroup.Users;
 
+                clientContext.Load(visitors);
+                clientContext.Load(members);
+                clientContext.Load(owners);
+                clientContext.ExecuteQueryRetry();
+
                 var visitorsPrivate = new List<User>();
 
                 for (var i = 0; i < visitors.Count; i--)
