@@ -45,7 +45,6 @@ namespace Cumulus.Monads.Graph
                 var members = await group.Members.Request().Select("displayName, id, mail, userPrincipalName, userType").GetAsync();
 
                 var users = new List<GroupUser>();
-                var removedGuestUsers = new List<GroupUser>();
 
                 foreach (var u in members.CurrentPage.Where(p => p.GetType() == typeof(User)).Cast<User>().ToList())
                 {
@@ -53,29 +52,35 @@ namespace Cumulus.Monads.Graph
                 }
 
 
-                var guestUsers = users.Where(u => u.UserType.Equals("Guest")).ToList();
-
-
                 // Removing users from group members
                 for (int i = 0; i < users.Count; i++)
                 {
                     var user = users[i];
+                    if(user.UserType != "Guest" && request.GroupMembersRemoval == GroupMembersRemoval.GuestUsersOnly)
+                    {
+                        continue;
+                    }                   
                     log.Info($"Removing user {user.Id} from group {request.GroupId}");
                     await group.Members[user.Id].Reference.Request().DeleteAsync();
                 }
 
-                // Removes guest users
-                for (int i = 0; i < guestUsers.Count; i++)
+
+                var removedGuestUsers = new List<GroupUser>();
+                if (request.RemoveGuestUsers)
                 {
-                    var guestUser = guestUsers[i];
-                    log.Info($"Retrieving unified membership for user {guestUser.Id}");
-                    var memberOfPage = await client.Users[guestUser.Id].MemberOf.Request().GetAsync();
-                    var unifiedGroups = memberOfPage.CurrentPage.Where(p => p.GetType() == typeof(Group)).Cast<Group>().ToList().Where(g => g.GroupTypes.Contains("Unified")).ToList();
-                    if(request.RemoveGuestUsers && unifiedGroups.Count == 0)
+                    var guestUsers = users.Where(u => u.UserType.Equals("Guest")).ToList();
+                    for (int i = 0; i < guestUsers.Count; i++)
                     {
-                        log.Info($"Removing guest user {guestUser.Id}");
-                        await client.Users[guestUser.Id].Request().DeleteAsync();
-                        removedGuestUsers.Add(guestUser);
+                        var guestUser = guestUsers[i];
+                        log.Info($"Retrieving unified membership for user {guestUser.Id}");
+                        var memberOfPage = await client.Users[guestUser.Id].MemberOf.Request().GetAsync();
+                        var unifiedGroups = memberOfPage.CurrentPage.Where(p => p.GetType() == typeof(Group)).Cast<Group>().ToList().Where(g => g.GroupTypes.Contains("Unified")).ToList();
+                        if (unifiedGroups.Count == 0)
+                        {
+                            log.Info($"Removing guest user {guestUser.Id}");
+                            await client.Users[guestUser.Id].Request().DeleteAsync();
+                            removedGuestUsers.Add(guestUser);
+                        }
                     }
                 }
 
@@ -116,6 +121,8 @@ namespace Cumulus.Monads.Graph
             public string GroupId { get; set; }
             [Display(Description = "Should guest users with no remaining Unified membership be removed from AD")]
             public bool RemoveGuestUsers { get; set; }
+            [Display(Description = "Group members removal")]
+            public GroupMembersRemoval GroupMembersRemoval { get; set; }
         }
 
         public class RemoveGroupMembersResponse
@@ -124,6 +131,14 @@ namespace Cumulus.Monads.Graph
             public List<GroupUser> RemovedMembers { get; set; }
             [Display(Description = "List of removed guest users")]
             public List<GroupUser> RemovedGuestUsers { get; set; }
+        }
+
+        public enum GroupMembersRemoval
+        {
+            [Display(Name = "Remove all group members")]
+            All,
+            [Display(Name = "Remove all guest group members")]
+            GuestUsersOnly,
         }
     }
 }
