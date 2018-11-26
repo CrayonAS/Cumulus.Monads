@@ -58,17 +58,17 @@ namespace Cumulus.Monads.Graph
                     DisplayName = displayName,
                     Mail = addedGroup.Mail
                 };
-                if (request.AllowToAddGuests != null)
-                {
-                    var groupUnifiedGuestSetting = new GroupSetting()
-                    {
-                        DisplayName = "Group.Unified.Guest",
-                        TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
-                        Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = request.AllowToAddGuests.ToString() } }
-                    };
-                    log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = {request.AllowToAddGuests.ToString()}");
-                    await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
-                }
+                //if (request.AllowToAddGuests != null)
+                //{
+                //    var groupUnifiedGuestSetting = new GroupSetting()
+                //    {
+                //        DisplayName = "Group.Unified.Guest",
+                //        TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
+                //        Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = request.AllowToAddGuests.ToString() } }
+                //    };
+                //    log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = {request.AllowToAddGuests.ToString()}");
+                //    await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
+                //}
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
