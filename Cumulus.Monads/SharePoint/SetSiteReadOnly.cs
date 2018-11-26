@@ -38,15 +38,10 @@ namespace Cumulus.Monads.SharePoint
                 var web = clientContext.Web;
                 const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
 
-                clientContext.Load(web,
-                    w => w.AllProperties,
-                    w => w.SiteUsers,
-                    w => w.AssociatedVisitorGroup,
-                    w => w.AssociatedMemberGroup,
-                    w => w.AssociatedOwnerGroup);
-                clientContext.Load(web.AssociatedVisitorGroup.Users);
-                clientContext.Load(web.AssociatedMemberGroup.Users);
-                clientContext.Load(web.AssociatedOwnerGroup.Users);
+                clientContext.Load(web, w => w.AllProperties, w => w.SiteUsers);
+                clientContext.Load(web.AssociatedVisitorGroup, g => g.Title, g => g.Users);
+                clientContext.Load(web.AssociatedMemberGroup, g => g.Title, g => g.Users);
+                clientContext.Load(web.AssociatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
                 var visitors = web.AssociatedVisitorGroup.Users;
