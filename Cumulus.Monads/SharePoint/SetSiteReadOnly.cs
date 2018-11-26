@@ -44,16 +44,14 @@ namespace Cumulus.Monads.SharePoint
                     w => w.AssociatedVisitorGroup,
                     w => w.AssociatedMemberGroup,
                     w => w.AssociatedOwnerGroup);
+                clientContext.Load(web.AssociatedVisitorGroup.Users);
+                clientContext.Load(web.AssociatedMemberGroup.Users);
+                clientContext.Load(web.AssociatedOwnerGroup.Users);
                 clientContext.ExecuteQueryRetry();
 
                 var visitors = web.AssociatedVisitorGroup.Users;
                 var members = web.AssociatedMemberGroup.Users;
                 var owners = web.AssociatedOwnerGroup.Users;
-
-                clientContext.Load(visitors);
-                clientContext.Load(members);
-                clientContext.Load(owners);
-                clientContext.ExecuteQueryRetry();
 
                 var visitorsPrivate = new List<User>();
 
