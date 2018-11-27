@@ -35,8 +35,11 @@ namespace Cumulus.Monads.Graph
                 try
                 {
                     // And if any, add it to the collection of group's owners
+                    log.Info($"Adding user {request.LoginName} to Owners group for {request.GroupId}");
                     await client.Groups[request.GroupId].Owners.References.Request().AddAsync(owner);
-                    if (request.AddOption == AddOwnerOption.AddAsOwnerAndMember) {
+                    if (request.AddOption == AddOwnerOption.AddAsOwnerAndMember)
+                    {
+                        log.Info($"Adding user {request.LoginName} to Members group for {request.GroupId}");
                         await client.Groups[request.GroupId].Members.References.Request().AddAsync(owner);
                     }
                     added = true;
