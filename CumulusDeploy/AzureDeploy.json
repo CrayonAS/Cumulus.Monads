@@ -1,0 +1,313 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "LogicAppName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "metadata": {
+        "description": "Name of the Logic App."
+      }
+    },
+    "LogicAppLocation": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "centralus",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "japaneast",
+        "japanwest",
+        "northcentralus",
+        "northeurope",
+        "southcentralus",
+        "southeastasia",
+        "westeurope",
+        "westus"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
+    }
+  },
+  "variables": {
+    "logicAppName": "[parameters('LogicAppName')]"
+  },
+  "resources": [
+    {
+      "name": "[variables('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[parameters('LogicAppLocation')]",
+      "apiVersion": "2016-06-01",
+      "dependsOn": [ "linkedTemplate" ],
+      "tags": {
+        "displayName": "LogicAppName"
+      },
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "actions": {
+            "Initialize_siteInfoFilledOut": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "siteInfoFilledOut",
+                    "type": "Boolean",
+                    "value": false
+                  }
+                ]
+              },
+              "runAfter": {}
+            },
+            "Initialize_variable_reminderDays": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "reminderDays",
+                    "type": "Array",
+                    "value": [
+                      1,
+                      7,
+                      14,
+                      28
+                    ]
+                  }
+                ]
+              },
+              "runAfter": {}
+            },
+            "Initialize_loopCount": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "loopCount",
+                    "type": "Integer",
+                    "value": 0
+                  }
+                ]
+              },
+              "runAfter": {}
+            },
+            "Until": {
+              "type": "Until",
+              "expression": "@equals(variables('siteInfoFilledOut'), true)",
+              "limit": {
+                "count": 29,
+                "timeout": "P30D"
+              },
+              "actions": {
+                "Compose_2": {
+                  "type": "Compose",
+                  "inputs": "check if custom script is present on site@{triggerBody()?['webUrl']} ",
+                  "runAfter": {}
+                },
+                "Condition_2": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@outputs('Compose_2')",
+                          "is site configured?"
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Set_variable": {
+                      "type": "SetVariable",
+                      "inputs": {
+                        "name": "siteInfoFilledOut",
+                        "value": "@true"
+                      },
+                      "runAfter": {}
+                    }
+                  },
+                  "runAfter": {
+                    "Compose_2": [
+                      "Succeeded"
+                    ]
+                  },
+                  "else": {
+                    "actions": {
+                      "Condition": {
+                        "type": "If",
+                        "expression": {
+                          "and": [
+                            {
+                              "contains": [
+                                "@variables('reminderDays')",
+                                "@variables('loopCount')"
+                              ]
+                            }
+                          ]
+                        },
+                        "actions": {
+                          "Send_an_email": {
+                            "type": "ApiConnection",
+                            "inputs": {
+                              "host": {
+                                "connection": {
+                                  "name": "@parameters('$connections')['office365']['connectionId']"
+                                }
+                              },
+                              "method": "post",
+                              "body": {
+                                "To": "@triggerBody()?['creatorEmail']",
+                                "Subject": "Conigfure up site",
+                                "Body": "You need to configure up your site on@{triggerBody()?['webUrl']} "
+                              },
+                              "path": "/Mail"
+                            },
+                            "runAfter": {}
+                          }
+                        },
+                        "runAfter": {}
+                      },
+                      "Delay_1_day": {
+                        "type": "Wait",
+                        "inputs": {
+                          "interval": {
+                            "count": 1,
+                            "unit": "Day"
+                          }
+                        },
+                        "runAfter": {
+                          "Condition": [
+                            "Succeeded"
+                          ]
+                        }
+                      },
+                      "Increment_loopCount": {
+                        "type": "IncrementVariable",
+                        "inputs": {
+                          "name": "loopCount",
+                          "value": 1
+                        },
+                        "runAfter": {
+                          "Delay_1_day": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "description": "If site is configured, set variable to true and exit loop"
+                }
+              },
+              "runAfter": {
+                "Initialize_siteInfoFilledOut": [
+                  "Succeeded"
+                ],
+                "Initialize_variable_reminderDays": [
+                  "Succeeded"
+                ],
+                "Initialize_loopCount": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Site_Info_still_not_filled_in": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@variables('siteInfoFilledOut')",
+                      "@false"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Compose": {
+                  "type": "Compose",
+                  "inputs": "Delete site@{triggerBody()?['webUrl']} ",
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "Until": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "outputs": {},
+          "parameters": {},
+          "triggers": {
+            "manual": {
+              "type": "request",
+              "kind": "http",
+              "inputs": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "weburl": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "properties": {
+                        "event": {
+                          "type": "string"
+                        },
+                        "product": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "webdescription": {
+                      "type": "string"
+                    },
+                    "creatorname": {
+                      "type": "string"
+                    },
+                    "creatoremail": {
+                      "type": "string"
+                    },
+                    "createdtimeutc": {
+                      "type": "string"
+                    },
+                    "groupid": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "method": "post"
+              }
+            }
+          }
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "apiVersion": "2017-05-10",
+      "name": "linkedTemplate",
+      "type": "Microsoft.Resources/deployments",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "https://cumulusmonadssecond.azurewebsites.net/api/CustomConnector?code=Dya1aR5TNeq9n2nZBx1chOD2c9tYjRJIKbYN1eZLUlxQkB8oaelXSw==",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {}
+      }
+    }
+
+
+
+  ],
+  "outputs": {}
+}
