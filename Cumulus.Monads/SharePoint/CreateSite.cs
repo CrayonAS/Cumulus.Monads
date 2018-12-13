@@ -40,14 +40,6 @@ namespace Cumulus.Monads.SharePoint
                 {
                     throw new ArgumentException("Parameter cannot be null", "Url");
                 }
-                //if (string.IsNullOrWhiteSpace(request.Template))
-                //{
-                //    throw new ArgumentException("Parameter cannot be null", "Template");
-                //}
-                //if (request.Language == 0)
-                //{
-                //    throw new ArgumentException("Parameter cannot be null", "Language");
-                //}
 
                 var adminContext = await ConnectADAL.GetClientContext(adminUrl, log);
                 Tenant tenant = new Tenant(adminContext);
