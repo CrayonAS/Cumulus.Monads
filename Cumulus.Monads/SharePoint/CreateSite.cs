@@ -27,19 +27,41 @@ namespace Cumulus.Monads.SharePoint
 
             try
             {
+
+                if (string.IsNullOrWhiteSpace(request.Title))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "Title");
+                }
+                if (string.IsNullOrWhiteSpace(request.Tenant))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "Tenant");
+                }
+                if (string.IsNullOrWhiteSpace(request.Url))
+                {
+                    throw new ArgumentException("Parameter cannot be null", "Url");
+                }
+                //if (string.IsNullOrWhiteSpace(request.Template))
+                //{
+                //    throw new ArgumentException("Parameter cannot be null", "Template");
+                //}
+                //if (request.Language == 0)
+                //{
+                //    throw new ArgumentException("Parameter cannot be null", "Language");
+                //}
+
                 var adminContext = await ConnectADAL.GetClientContext(adminUrl, log);
                 Tenant tenant = new Tenant(adminContext);
                 adminContext.ExecuteQuery();
                 string url = $"https://{request.Tenant}.sharepoint.com/sites/{request.Url}";
                 var siteCreationProperties = new SiteCreationProperties()
                 {
+                    Title = request.Title,
                     Url = url,
                     Owner = request.OwnerEmail,
-                    Template = "STS#3",
+                    Template = !string.IsNullOrWhiteSpace(request.Template) ? request.Template : "STS#3",
                     StorageMaximumLevel = 100,
                     UserCodeMaximumLevel = 0,
-                    Title = request.Title,
-                   Lcid = request.Language,
+                    Lcid = request.Language != 0 ? request.Language : 1033,
                 };
                 tenant.CreateSite(siteCreationProperties);
                 adminContext.ExecuteQuery();
@@ -70,10 +92,12 @@ namespace Cumulus.Monads.SharePoint
             [Required]
             [Display(Description = "Url")]
             public string Url { get; set; }
-            [Display(Description = "Description ")]
+            [Display(Description = "Description")]
             public string Description { get; set; }
-            [Display(Description = "OwnerEmail ")]
+            [Display(Description = "OwnerEmail")]
             public string OwnerEmail { get; set; }
+            [Display(Description = "Template")]
+            public string Template { get; set; }
             [Display(Description = "Language ")]
             public uint Language { get; set; }
         }
