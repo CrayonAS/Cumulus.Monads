@@ -51,7 +51,6 @@ namespace Cumulus.Monads.Graph
                     GroupTypes = new List<string> { "Unified" },
                     Classification = request.Classification
                 };
-
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
                 var createGroupResponse = new CreateGroupResponse
                 {
