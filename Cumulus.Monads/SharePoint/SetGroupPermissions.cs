@@ -47,6 +47,28 @@ namespace Cumulus.Monads.SharePoint
                 web.Context.Load(webRoleAssignments);
                 web.Context.ExecuteQueryRetry();
 
+                var associatedOwnerGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedOwnerGroup.Id).ToList();
+                var associatedMemberGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedMemberGroup.Id).ToList();
+                var associatedVisitorGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedVisitorGroup.Id).ToList();
+
+                for(var i = 0; i < associatedOwnerGroupRoleAss.Count; i++)
+                {
+                    associatedOwnerGroupRoleAss[i].DeleteObject();
+                }
+
+                for (var i = 0; i < associatedMemberGroupRoleAss.Count; i++)
+                {
+                    associatedMemberGroupRoleAss[i].DeleteObject();
+                }
+
+                for (var i = 0; i < associatedVisitorGroupRoleAss.Count; i++)
+                {
+                    associatedVisitorGroupRoleAss[i].DeleteObject();
+                }
+
+                web.Update();
+                web.Context.ExecuteQueryRetry();
+
                 var associatedOwnerGroupRdb = new RoleDefinitionBindingCollection(clientContext)
                 {
                     webRoleDefinitions.GetByType(request.OwnersPermissionLevel)
