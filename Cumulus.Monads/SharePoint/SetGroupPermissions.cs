@@ -51,7 +51,7 @@ namespace Cumulus.Monads.SharePoint
                 var associatedMemberGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedMemberGroup.Id).ToList();
                 var associatedVisitorGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedVisitorGroup.Id).ToList();
 
-                for(var i = 0; i < associatedOwnerGroupRoleAss.Count; i++)
+                for (var i = 0; i < associatedOwnerGroupRoleAss.Count; i++)
                 {
                     associatedOwnerGroupRoleAss[i].DeleteObject();
                 }
