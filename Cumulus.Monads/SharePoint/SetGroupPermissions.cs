@@ -51,7 +51,7 @@ namespace Cumulus.Monads.SharePoint
                 var associatedMemberGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedMemberGroup.Id).ToList();
                 var associatedVisitorGroupRoleAss = webRoleAssignments.Where(roleAss => roleAss.PrincipalId == associatedVisitorGroup.Id).ToList();
 
-                for (var i = 0; i < associatedOwnerGroupRoleAss.Count; i++)
+                for(var i = 0; i < associatedOwnerGroupRoleAss.Count; i++)
                 {
                     associatedOwnerGroupRoleAss[i].DeleteObject();
                 }
@@ -69,31 +69,30 @@ namespace Cumulus.Monads.SharePoint
                 web.Update();
                 web.Context.ExecuteQueryRetry();
 
-                var associatedOwnerGroupRoleDef = webRoleDefinitions.GetByType(request.OwnersPermissionLevel);
-                var associatedOwnerGroupRdb = new RoleDefinitionBindingCollection(clientContext) { associatedOwnerGroupRoleDef };
+                var associatedOwnerGroupRdb = new RoleDefinitionBindingCollection(clientContext)
+                {
+                    webRoleDefinitions.GetByType(request.OwnersPermissionLevel)
+                };
                 webRoleAssignments.Add(associatedOwnerGroup, associatedOwnerGroupRdb);
 
-                var associatedMemberGroupRoleDef = webRoleDefinitions.GetByType(request.MembersPermissionLevel);
-                var associatedMemberGroupRdp = new RoleDefinitionBindingCollection(clientContext) { associatedMemberGroupRoleDef };
+                var associatedMemberGroupRdp = new RoleDefinitionBindingCollection(clientContext)
+                {
+                    webRoleDefinitions.GetByType(request.MembersPermissionLevel)
+                };
                 webRoleAssignments.Add(associatedMemberGroup, associatedMemberGroupRdp);
 
-                var associatedVisitorGroupRoleDef = webRoleDefinitions.GetByType(request.VisitorsPermissionLevel);
-                var associatedVisitorGroupRdb = new RoleDefinitionBindingCollection(clientContext) { associatedVisitorGroupRoleDef };
+                var associatedVisitorGroupRdb = new RoleDefinitionBindingCollection(clientContext)
+                {
+                    webRoleDefinitions.GetByType(request.VisitorsPermissionLevel)
+                };
                 webRoleAssignments.Add(associatedVisitorGroup, associatedVisitorGroupRdb);
 
                 web.Update();
                 web.Context.ExecuteQueryRetry();
 
-                var response = new SetGroupPermissionsResponse
-                {
-                    PermissionsModified = true,
-                    OwnersPermissionLevel = associatedOwnerGroupRoleDef.Name,
-                    MembersPermissionLevel = associatedMemberGroupRoleDef.Name,
-                    VisitorsPermissionLevel = associatedVisitorGroupRoleDef.Name
-                };
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<SetGroupPermissionsResponse>(response, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<SetGroupPermissionsResponse>(new SetGroupPermissionsResponse { PermissionsModified = true }, new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
@@ -128,12 +127,6 @@ namespace Cumulus.Monads.SharePoint
 
             [Display(Description = "Was group permissions modified")]
             public bool PermissionsModified { get; set; }
-            [Display(Description = "Permission level for Owners")]
-            public string OwnersPermissionLevel { get; set; }
-            [Display(Description = "Permission level for Members")]
-            public string MembersPermissionLevel { get; set; }
-            [Display(Description = "Permission level for Visitors")]
-            public string VisitorsPermissionLevel { get; set; }
         }
     }
 }
