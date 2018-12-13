@@ -24,7 +24,7 @@ namespace Cumulus.Monads.Graph
     {
         private static readonly Regex ReRemoveIllegalChars = new Regex("[^a-z0-9-.]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        [FunctionName("CreateGroupWithOwnerMember")]
+        [FunctionName("CreateGroup")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]CreateGroupRequest request, TraceWriter log)
         {
             try
