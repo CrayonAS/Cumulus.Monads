@@ -16,6 +16,7 @@ using Microsoft.Graph;
 using Cumulus.Monads.Helpers;
 using Group = Microsoft.Graph.Group;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Cumulus.Monads.Graph
 {
@@ -54,9 +55,9 @@ namespace Cumulus.Monads.Graph
                 };
 
 
-                if (request.owners != null && request.owners.Length > 0)
+                if (request.Owners != null && request.Owners.Length > 0)
                 {
-                    var users = GetUsers(client, request.owners);
+                    var users = GetUsers(client, request.Owners);
                     if (users != null)
                     {
                         newGroup.OwnersODataBind = users.Select(u => string.Format("https://graph.microsoft.com/v1.0/users/{0}", u.Id)).ToArray();
@@ -64,9 +65,9 @@ namespace Cumulus.Monads.Graph
 
                 }
 
-                if (request.members != null && request.members.Length > 0)
+                if (request.Members != null && request.Members.Length > 0)
                 {
-                    var users = GetUsers(client, request.members);
+                    var users = GetUsers(client, request.Members);
                     if (users != null)
                     {
                         newGroup.MembersODataBind = users.Select(u => string.Format("https://graph.microsoft.com/v1.0/users/{0}", u.Id)).ToArray();
@@ -84,16 +85,16 @@ namespace Cumulus.Monads.Graph
                         .Request()
                         .GetAsync();
 
-                if (request.members != null && request.members.Length > 0)
+                if (request.Members != null && request.Members.Length > 0)
                 {
                     // For each and every owner
-                    await UpdateMembers(request.members, client, groupToUpdate);
+                    await UpdateMembers(request.Members, client, groupToUpdate);
                 }
 
-                if (request.owners != null && request.owners.Length > 0)
+                if (request.Owners != null && request.Owners.Length > 0)
                 {
                     // For each and every owner
-                    await UpdateOwners(request.owners, client, groupToUpdate);
+                    await UpdateOwners(request.Owners, client, groupToUpdate);
                 }
 
                 var createGroupResponse = new CreateGroupResponse
@@ -136,7 +137,6 @@ namespace Cumulus.Monads.Graph
             }
 
         }
-
 
 
         private static async Task UpdateMembers(string[] members, GraphServiceClient graphClient, Group targetGroup)
@@ -464,9 +464,10 @@ namespace Cumulus.Monads.Graph
 
             [Display(Description = "AllowToAddGuests")]
             public bool AllowToAddGuests { get; set; }
-
-            public string[] owners { get; set; }
-            public string[] members { get; set; }
+            [Display(Description = "Owners")]
+            public string[] Owners { get; set; }
+            [Display(Description = "Members")]
+            public string[] Members { get; set; }
         }
 
         public class CreateGroupResponse
@@ -481,7 +482,13 @@ namespace Cumulus.Monads.Graph
             public string Mail { get; set; }
         }
 
+        class GroupExtended : Group
+        {
+            [JsonProperty("owners@odata.bind", NullValueHandling = NullValueHandling.Ignore)]
+            public string[] OwnersODataBind { get; set; }
 
-
+            [JsonProperty("members@odata.bind", NullValueHandling = NullValueHandling.Ignore)]
+            public string[] MembersODataBind { get; set; }
+        }
     }
 }
