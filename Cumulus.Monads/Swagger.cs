@@ -50,7 +50,7 @@ namespace Cumulus.Monads
             });
         }
 
-        internal static dynamic GenerateSecurityDefinitions()
+        private static dynamic GenerateSecurityDefinitions()
         {
             dynamic securityDefinitions = new ExpandoObject();
             securityDefinitions.apikeyQuery = new ExpandoObject();
@@ -67,7 +67,7 @@ namespace Cumulus.Monads
             return securityDefinitions;
         }
 
-        internal static dynamic GeneratePaths(Assembly assembly, dynamic doc)
+        private static dynamic GeneratePaths(Assembly assembly, dynamic doc)
         {
             dynamic paths = new ExpandoObject();
             var methods = assembly.GetTypes()
