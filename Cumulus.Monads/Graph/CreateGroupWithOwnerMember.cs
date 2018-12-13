@@ -40,7 +40,6 @@ namespace Cumulus.Monads.Graph
                 string displayName = GetDisplayName(request);
                 GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.Beta);
 
-
                 var newGroup = new GroupExtended
                 {
                     DisplayName = displayName,
@@ -76,12 +75,6 @@ namespace Cumulus.Monads.Graph
 
                 
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-
-                // var x = await client.Groups.Request().Filter("displayName").GetAsync();
-
-                //string dn = await client.Groups[addedGroup.DisplayName].Request().GetAsync();
-
-                
 
                 var groupToUpdate = await client.Groups[addedGroup.Id]
                         .Request()
