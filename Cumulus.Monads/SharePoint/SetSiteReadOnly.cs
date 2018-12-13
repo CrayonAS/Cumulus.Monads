@@ -36,45 +36,46 @@ namespace Cumulus.Monads.SharePoint
 
                 var clientContext = await ConnectADAL.GetClientContext(request.SiteURL, log);
                 var web = clientContext.Web;
-                var webProperties = web.AllProperties;
-                var siteUsers = web.SiteUsers;
+                
                 var associatedVisitorGroup = web.AssociatedVisitorGroup;
                 var associatedMemberGroup = web.AssociatedMemberGroup;
                 var associatedOwnerGroup = web.AssociatedOwnerGroup;
 
-                const string everyoneIdent = "c:0-.f|rolemanager|spo-grid-all-users/";
-
-                clientContext.Load(webProperties);
-                clientContext.Load(siteUsers);
+                clientContext.Load(web, w => w.AllProperties, w => w.SiteUsers);
                 clientContext.Load(associatedVisitorGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedMemberGroup, g => g.Title, g => g.Users);
                 clientContext.Load(associatedOwnerGroup, g => g.Title, g => g.Users);
                 clientContext.ExecuteQueryRetry();
 
-                var visitors = associatedVisitorGroup.Users;
-                var members = associatedMemberGroup.Users;
-                var owners = associatedOwnerGroup.Users;
+                var addToVisitorsGroup = new List<User>();
+                addToVisitorsGroup.AddRange(associatedMemberGroup.Users);
+                addToVisitorsGroup.AddRange(associatedOwnerGroup.Users);
 
-                var visitorsPrivate = new List<User>();
-
-                for (var i = 0; i < visitors.Count; i--)
+                foreach (var user in associatedVisitorGroup.Users)
                 {
-                    log.Info($"Removing {visitors[i].LoginName} from {associatedVisitorGroup.Title}");
-                    web.RemoveUserFromGroup(associatedVisitorGroup, visitors[i]);
+                    if (request.RemoveVisitors)
+                    {
+                        log.Info($"Removing {user.LoginName} from {associatedVisitorGroup.Title}");
+                        associatedVisitorGroup.Users.RemoveByLoginName(user.LoginName);
+                    }
                 }
 
-                for (var i = 0; i < members.Count; i--)
+                foreach(var user in associatedMemberGroup.Users)
                 {
-                    log.Info($"Removing {members[i].LoginName} from {associatedMemberGroup.Title}");
-                    web.RemoveUserFromGroup(associatedMemberGroup, members[i]);
-                    visitorsPrivate.Add(members[i]);
+                    if (request.RemoveMembers)
+                    {
+                        log.Info($"Removing {user.LoginName} from {associatedMemberGroup.Title}");
+                        associatedMemberGroup.Users.RemoveByLoginName(user.LoginName);
+                    }
                 }
 
-                for (var i = 0; i < owners.Count; i--)
+                foreach (var user in associatedOwnerGroup.Users)
                 {
-                    log.Info($"Removing {owners[i].LoginName} from {associatedOwnerGroup.Title}");
-                    web.RemoveUserFromGroup(associatedOwnerGroup, owners[i]);
-                    visitorsPrivate.Add(owners[i]);
+                    if (request.RemoveOwners)
+                    {
+                        log.Info($"Removing {user.LoginName} from {associatedOwnerGroup.Title}");
+                        associatedOwnerGroup.Users.RemoveByLoginName(user.LoginName);
+                    }
                 }
 
                 clientContext.ExecuteQueryRetry();
@@ -83,12 +84,11 @@ namespace Cumulus.Monads.SharePoint
                 web.AddUserToGroup(associatedOwnerGroup, request.Owner);
 
 
-                if (webProperties.FieldValues.ContainsKey("GroupType") && webProperties.FieldValues["GroupType"].ToString().Equals("Private"))
+                if (web.AllProperties.FieldValues.ContainsKey("GroupType") && web.AllProperties.FieldValues["GroupType"].ToString().Equals("Private"))
                 {
                     log.Info($"The site is connected to a private group. Adding existing members/owners to {associatedVisitorGroup.Title}.");
-                    for (var i = (visitorsPrivate.Count - 1); i >= 0; i--)
+                    foreach(var user in addToVisitorsGroup)
                     {
-                        var user = visitorsPrivate[i];
                         if (user.LoginName.Contains("#ext#") && request.RemoveExternalUsers)
                         {
                             log.Info($"{user.LoginName} is an external user and will not be added to visitors.");
@@ -96,19 +96,20 @@ namespace Cumulus.Monads.SharePoint
                         else
                         {
                             log.Info($"Adding {user.LoginName} to {associatedVisitorGroup.Title}.");
-                            web.AddUserToGroup(associatedVisitorGroup, user);
+                            associatedVisitorGroup.Users.AddUser(user);
                         }
                     }
                 }
                 else
                 {
-                    foreach (User user in siteUsers)
+                    try
                     {
-                        if (user.LoginName.StartsWith(everyoneIdent))
-                        {
-                            log.Info($"Adding {user.LoginName} to {associatedVisitorGroup.Title}");
-                            web.AddUserToGroup(associatedVisitorGroup, user);
-                        }
+                        var user = web.SiteUsers.First(u => u.LoginName.Contains("spo-grid-all-users"));
+                        log.Info($"Adding {user.LoginName} to {associatedVisitorGroup.Title}");
+                        web.AddUserToGroup(associatedVisitorGroup, user);
+                    } catch (Exception)
+                    {
+
                     }
                 }
 
@@ -141,6 +142,18 @@ namespace Cumulus.Monads.SharePoint
             [Required]
             [Display(Description = "Remove external users")]
             public bool RemoveExternalUsers { get; set; }
+            [Required]
+            [Display(Description = "Remove users from members group")]
+            public bool RemoveMembers { get; set; }
+            [Required]
+            [Display(Description = "Remove users from owners group")]
+            public bool RemoveOwners { get; set; }
+            [Required]
+            [Display(Description = "Remove users from visitors group")]
+            public bool RemoveVisitors { get; set; }
+            [Required]
+            [Display(Description = "Add Owners/Members to visitors group")]
+            public bool AddOwnersMembersToVisitorsGroup { get; set; }
         }
 
         public class SetSiteReadOnlyResponse

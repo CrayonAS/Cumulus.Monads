@@ -35,7 +35,13 @@ namespace Cumulus.Monads.Graph
                 try
                 {
                     // And if any, add it to the collection of group's owners
+                    log.Info($"Adding user {request.LoginName} to Owners group for {request.GroupId}");
                     await client.Groups[request.GroupId].Owners.References.Request().AddAsync(owner);
+                    if (request.AddOption == AddOwnerOption.AddAsOwnerAndMember)
+                    {
+                        log.Info($"Adding user {request.LoginName} to Members group for {request.GroupId}");
+                        await client.Groups[request.GroupId].Members.References.Request().AddAsync(owner);
+                    }
                     added = true;
                 }
                 catch (ServiceException ex)
@@ -54,6 +60,14 @@ namespace Cumulus.Monads.Graph
             return new AddOwnerResponse() { Added = added };
         }
 
+        public enum AddOwnerOption
+        {
+            [Display(Name = "Add as Owner only")]
+            AddAsOwnerOnly,
+            [Display(Name = "Add as Owner and Member")]
+            AddAsOwnerAndMember,
+        }
+
         public class AddOwnerRequest
         {
             [Required]
@@ -63,6 +77,8 @@ namespace Cumulus.Monads.Graph
             [Required]
             [Display(Description = "Unique login name of the owner (user principal name)")]
             public string LoginName { get; set; }
+            [Display(Description = "Add option")]
+            public AddOwnerOption AddOption { get; set; }
         }
 
         public class AddOwnerResponse
