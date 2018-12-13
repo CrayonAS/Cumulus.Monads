@@ -15,12 +15,12 @@ using Cumulus.Monads.Helpers;
 
 namespace Cumulus.Monads.SharePoint
 {
-    public static class AddUserToGroup
+    public static class SetGroupPermissions
     {
-        [FunctionName("AddUserToGroup")]
-        [ResponseType(typeof(AddUserToGroupResponse))]
-        [Display(Name = "Add user to SharePoint group", Description = "")]
-        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]AddUserToGroupRequest request, TraceWriter log)
+        [FunctionName("SetGroupPermissions")]
+        [ResponseType(typeof(SetGroupPermissionsResponse))]
+        [Display(Name = "Set group permissions", Description = "")]
+        public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Function, "post")]SetGroupPermissionsRequest request, TraceWriter log)
         {
             string siteUrl = request.SiteURL;
 
@@ -30,94 +30,81 @@ namespace Cumulus.Monads.SharePoint
                 {
                     throw new ArgumentException("Parameter cannot be null", "SiteURL");
                 }
-                if (string.IsNullOrWhiteSpace(request.Title))
-                {
-                    throw new ArgumentException("Parameter cannot be null", "Title");
-                }
 
                 var clientContext = await ConnectADAL.GetClientContext(siteUrl, log);
 
 
                 var web = clientContext.Web;
-                var user = web.EnsureUser(request.Title);
-                Microsoft.SharePoint.Client.Group siteGroup = null;
+                var associatedOwnerGroup = web.AssociatedOwnerGroup;
+                var associatedMemberGroup = web.AssociatedMemberGroup;
+                var associatedVisitorGroup = web.AssociatedVisitorGroup;
+                var webRoleDefinitions = web.RoleDefinitions;
+                var webRoleAssignments = web.RoleAssignments;
+                web.Context.Load(associatedOwnerGroup);
+                web.Context.Load(associatedMemberGroup);
+                web.Context.Load(associatedVisitorGroup);
+                web.Context.Load(webRoleDefinitions);
+                web.Context.Load(webRoleAssignments);
+                web.Context.ExecuteQueryRetry();
 
-                switch(request.AssociatedGroup)
+                var associatedOwnerGroupRdb = new RoleDefinitionBindingCollection(clientContext)
                 {
-                    case AssociatedGroup.Member:
-                        {
-                            siteGroup = web.AssociatedMemberGroup;
-                        }
-                        break;
-                    case AssociatedGroup.Owner:
-                        {
-                            siteGroup = web.AssociatedOwnerGroup;
-                        }
-                        break;
-                    case AssociatedGroup.Visitor:
-                        {
-                            siteGroup = web.AssociatedVisitorGroup;
-                        }
-                        break;
-                }
+                    webRoleDefinitions.GetByType(request.OwnersPermissionLevel)
+                };
+                webRoleAssignments.Add(associatedOwnerGroup, associatedOwnerGroupRdb);
 
-
-                if (siteGroup != null)
+                var associatedMemberGroupRdp = new RoleDefinitionBindingCollection(clientContext)
                 {
-                    web.Context.Load(siteGroup);
-                    web.Context.Load(user);
-                    web.Context.ExecuteQueryRetry();
+                    webRoleDefinitions.GetByType(request.MembersPermissionLevel)
+                };
+                webRoleAssignments.Add(associatedMemberGroup, associatedMemberGroupRdp);
 
-                    siteGroup.Users.AddUser(user);
-                    web.Context.ExecuteQueryRetry();
-
-                    return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new ObjectContent<AddUserToGroupResponse>(new AddUserToGroupResponse { UserAdded = true}, new JsonMediaTypeFormatter())
-                    });
-                } else
+                var associatedVisitorGroupRdb = new RoleDefinitionBindingCollection(clientContext)
                 {
-                    return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new ObjectContent<AddUserToGroupResponse>(new AddUserToGroupResponse { UserAdded = false }, new JsonMediaTypeFormatter())
-                    });
-                }
+                    webRoleDefinitions.GetByType(request.VisitorsPermissionLevel)
+                };
+                webRoleAssignments.Add(associatedVisitorGroup, associatedVisitorGroupRdb);
+
+                web.Update();
+                web.Context.ExecuteQueryRetry();
+
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ObjectContent<SetGroupPermissionsResponse>(new SetGroupPermissionsResponse { PermissionsModified = true }, new JsonMediaTypeFormatter())
+                });
             }
             catch (Exception e)
             {
                 log.Error($"Error: {e.Message }\n\n{e.StackTrace}");
                 return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new ObjectContent<AddUserToGroupResponse>(new AddUserToGroupResponse { UserAdded = false }, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<SetGroupPermissionsResponse>(new SetGroupPermissionsResponse { PermissionsModified = false }, new JsonMediaTypeFormatter())
                 });
             }
         }
 
-        public enum AssociatedGroup
-        {
-            Member,
-            Owner,
-            Visitor
-        }
-
-        public class AddUserToGroupRequest
+        public class SetGroupPermissionsRequest
         {
             [Required]
             [Display(Description = "URL of site")]
             public string SiteURL { get; set; }
             [Required]
-            [Display(Description = "User")]
-            public string Title { get; set; }
+            [Display(Description = "Permission level for Owners")]
+            public RoleType OwnersPermissionLevel { get; set; }
             [Required]
-            [Display(Description = "Associated group")]
-            public AssociatedGroup AssociatedGroup { get; set; }
+            [Display(Description = "Permission level for Members")]
+            public RoleType MembersPermissionLevel { get; set; }
+            [Required]
+            [Display(Description = "Permission level for Visitors")]
+            public RoleType VisitorsPermissionLevel { get; set; }
 
         }
 
-        public class AddUserToGroupResponse {
+        public class SetGroupPermissionsResponse
+        {
 
-            [Display(Description = "Was user added to group")]
-            public bool UserAdded { get; set; }
+            [Display(Description = "Was group permissions modified")]
+            public bool PermissionsModified { get; set; }
         }
     }
 }
