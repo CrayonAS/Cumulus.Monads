@@ -82,7 +82,6 @@ namespace Cumulus.Monads.Graph
                     await AddGroupMemberOwner(members, client, addedGroup, false, log);
                 }
 
-
                 var createGroupResponse = new CreateGroupResponse
                 {
                     GroupId = addedGroup.Id,
