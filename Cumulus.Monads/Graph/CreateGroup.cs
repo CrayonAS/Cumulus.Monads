@@ -54,55 +54,39 @@ namespace Cumulus.Monads.Graph
                     Classification = request.Classification
                 };
 
-
-                if (request.Owners != null && request.Owners.Length > 0)
-                {
-                    var users = GetUsers(client, request.Owners);
-                    if (users != null)
-                    {
-                        newGroup.OwnersODataBind = users.Select(u => string.Format("https://graph.microsoft.com/v1.0/users/{0}", u.Id)).ToArray();
-                    }
-
-                }
-
-                if (request.Members != null && request.Members.Length > 0)
-                {
-                    var users = GetUsers(client, request.Members);
-                    if (users != null)
-                    {
-                        newGroup.MembersODataBind = users.Select(u => string.Format("https://graph.microsoft.com/v1.0/users/{0}", u.Id)).ToArray();
-                    }
-                }
-
-
-
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
 
-
-
-
-                var groupToUpdate = await client.Groups[addedGroup.Id]
-                        .Request()
-                        .GetAsync();
-
-                if (request.Members != null && request.Members.Length > 0)
-                {
-                    // For each and every owner
-                    await UpdateMembers(request.Members, client, groupToUpdate);
-                }
+                var owners = new List<User>();
+                var members = new List<User>();
 
                 if (request.Owners != null && request.Owners.Length > 0)
                 {
-                    // For each and every owner
-                    await UpdateOwners(request.Owners, client, groupToUpdate);
+                    owners = GetUsers(client, request.Owners);
+                    if (owners != null)
+                    {
+                        newGroup.OwnersODataBind = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+                        await AddGroupMemberOwner(owners, client, addedGroup, true, log);
+                    }
+
+                }
+
+                if (request.Members != null && request.Members.Length > 0)
+                {
+                    members = GetUsers(client, request.Members);
+                    if (members != null)
+                    {
+                        newGroup.MembersODataBind = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+                        await AddGroupMemberOwner(members, client, addedGroup, false, log);
+                    }
                 }
 
                 var createGroupResponse = new CreateGroupResponse
                 {
                     GroupId = addedGroup.Id,
                     DisplayName = displayName,
-                    Mail = addedGroup.Mail
-
+                    Mail = addedGroup.Mail,
+                    Owners = owners.Select(user => user.Mail).ToArray(),
+                    Members = members.Select(user => user.Mail).ToArray(),
                 };
                 try
                 {
@@ -138,196 +122,67 @@ namespace Cumulus.Monads.Graph
 
         }
 
-
-        private static async Task UpdateMembers(string[] members, GraphServiceClient graphClient, Group targetGroup)
+        private static List<User> GetUsers(GraphServiceClient graphClient, string[] userEmails)
         {
-            foreach (var m in members)
-            {
-                // Search for the user object
-                var memberQuery = await graphClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{m}'")
-                    .GetAsync();
+            return Task.Run(async () =>
+             {
+                 List<User> usersList = new List<User>();
+                 var users = await graphClient.Users.Request().Top(999).GetAsync();
+                 while (users.Count > 0)
+                 {
+                     foreach (var user in users)
+                     {
+                         if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
+                         {
+                             usersList.Add(user);
+                         }
+                     }
 
-                var member = memberQuery.FirstOrDefault();
+                     if (users.NextPageRequest != null)
+                     {
+                         users = await users.NextPageRequest.GetAsync();
+                     }
+                     else
+                     {
+                         break;
+                     }
+                 }
 
-                if (member != null)
-                {
-                    try
-                    {
-                        // And if any, add it to the collection of group's owners
-                        await graphClient.Groups[targetGroup.Id].Members.References.Request().AddAsync(member);
-                    }
-                    catch (ServiceException ex)
-                    {
-                        if (ex.Error.Code == "Request_BadRequest" &&
-                            ex.Error.Message.Contains("added object references already exist"))
-                        {
-                            // Skip any already existing member
-                        }
-                        else
-                        {
-                            throw ex;
-                        }
-                    }
-                }
-            }
-
-            // Remove any leftover member
-            var fullListOfMembers = await graphClient.Groups[targetGroup.Id].Members.Request().Select("userPrincipalName, Id").GetAsync();
-            var pageExists = true;
-
-            while (pageExists)
-            {
-                foreach (var member in fullListOfMembers)
-                {
-                    var currentMemberPrincipalName = (member as Microsoft.Graph.User)?.UserPrincipalName;
-                    if (!String.IsNullOrEmpty(currentMemberPrincipalName) &&
-                        !members.Contains(currentMemberPrincipalName, StringComparer.InvariantCultureIgnoreCase))
-                    {
-                        try
-                        {
-                            // If it is not in the list of current owners, just remove it
-                            await graphClient.Groups[targetGroup.Id].Members[member.Id].Reference.Request().DeleteAsync();
-                        }
-                        catch (ServiceException ex)
-                        {
-                            if (ex.Error.Code == "Request_BadRequest")
-                            {
-                                // Skip any failing removal
-                            }
-                            else
-                            {
-                                throw ex;
-                            }
-                        }
-                    }
-                }
-
-                if (fullListOfMembers.NextPageRequest != null)
-                {
-                    fullListOfMembers = await fullListOfMembers.NextPageRequest.GetAsync();
-                }
-                else
-                {
-                    pageExists = false;
-                }
-            }
+                 return usersList;
+             }).GetAwaiter().GetResult();
         }
 
 
-        private static async Task UpdateOwners(string[] owners, GraphServiceClient graphClient, Group targetGroup)
+        private static async Task AddGroupMemberOwner(List<User> users, GraphServiceClient graphClient, Group group, bool owner, TraceWriter log)
         {
-            foreach (var o in owners)
+            foreach (var user in users)
             {
-                // Search for the user object
-                var ownerQuery = await graphClient.Users
-                    .Request()
-                    .Filter($"userPrincipalName eq '{o}'")
-                    .GetAsync();
-
-                var owner = ownerQuery.FirstOrDefault();
-
-                if (owner != null)
+                try
                 {
-                    try
+                    if (owner)
                     {
-                        // And if any, add it to the collection of group's owners
-                        await graphClient.Groups[targetGroup.Id].Owners.References.Request().AddAsync(owner);
-                    }
-                    catch (ServiceException ex)
-                    {
-                        if (ex.Error.Code == "Request_BadRequest" &&
-                            ex.Error.Message.Contains("added object references already exist"))
-                        {
-                            // Skip any already existing owner
-                        }
-                        else
-                        {
-                            throw ex;
-                        }
-                    }
-                }
-            }
-
-            // Remove any leftover owner
-            var fullListOfOwners = await graphClient.Groups[targetGroup.Id].Owners.Request().Select("userPrincipalName, Id").GetAsync();
-            var pageExists = true;
-
-            while (pageExists)
-            {
-                foreach (var owner in fullListOfOwners)
-                {
-                    var currentOwnerPrincipalName = (owner as Microsoft.Graph.User)?.UserPrincipalName;
-                    if (!String.IsNullOrEmpty(currentOwnerPrincipalName) &&
-                        !owners.Contains(currentOwnerPrincipalName, StringComparer.InvariantCultureIgnoreCase))
-                    {
-                        try
-                        {
-                            // If it is not in the list of current owners, just remove it
-                            await graphClient.Groups[targetGroup.Id].Owners[owner.Id].Reference.Request().DeleteAsync();
-                        }
-                        catch (ServiceException ex)
-                        {
-                            if (ex.Error.Code == "Request_BadRequest")
-                            {
-                                // Skip any failing removal
-                            }
-                            else
-                            {
-                                throw ex;
-                            }
-                        }
-                    }
-                }
-
-                if (fullListOfOwners.NextPageRequest != null)
-                {
-                    fullListOfOwners = await fullListOfOwners.NextPageRequest.GetAsync();
-                }
-                else
-                {
-                    pageExists = false;
-                }
-            }
-        }
-
-
-        private static List<User> GetUsers(GraphServiceClient graphClient, string[] arrUsers)
-        {
-            if (arrUsers == null || arrUsers.Length == 0)
-            {
-                return new List<User>();
-            }
-            var result = Task.Run(async () =>
-            {
-                var usersResult = new List<User>();
-                var users = await graphClient.Users.Request().GetAsync();
-                while (users.Count > 0)
-                {
-                    foreach (var u in users)
-                    {
-                        if (arrUsers.Any(uc => string.Compare(u.UserPrincipalName, uc, true) == 0))
-                        {
-                            usersResult.Add(u);
-                        }
-                    }
-
-                    if (users.NextPageRequest != null)
-                    {
-                        users = await users.NextPageRequest.GetAsync();
+                        log.Info($"Setting {user.Mail} as Owner for the group.");
+                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
                     }
                     else
                     {
-                        break;
+                        log.Info($"Setting {user.Mail} as Member for the group.");
+                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
                     }
                 }
-
-                return usersResult;
-            }).GetAwaiter().GetResult();
-            return result;
+                catch (ServiceException ex)
+                {
+                    if (ex.Error.Code == "Request_BadRequest" && ex.Error.Message.Contains("added object references already exist"))
+                    {
+                        // Skip any already existing member
+                    }
+                    else
+                    {
+                        throw ex;
+                    }
+                }
+            }
         }
-
 
         static string GetDisplayName(CreateGroupRequest request)
         {
@@ -480,6 +335,10 @@ namespace Cumulus.Monads.Graph
 
             [Display(Description = "Mail of the Office 365 Group")]
             public string Mail { get; set; }
+            [Display(Description = "Owners")]
+            public string[] Owners { get; set; }
+            [Display(Description = "Members")]
+            public string[] Members { get; set; }
         }
 
         class GroupExtended : Group
