@@ -5,8 +5,6 @@ VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cumulus.Monads", "Cumulus.Monads\Cumulus.Monads.csproj", "{035B555D-BB54-4B90-AD99-205526AFE1A4}"
 EndProject
-Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "CumulusDeploy", "CumulusDeploy\CumulusDeploy.deployproj", "{BFB5EA0B-5C5F-4673-8504-AF5D024BCEFC}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{035B555D-BB54-4B90-AD99-205526AFE1A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{035B555D-BB54-4B90-AD99-205526AFE1A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{035B555D-BB54-4B90-AD99-205526AFE1A4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BFB5EA0B-5C5F-4673-8504-AF5D024BCEFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BFB5EA0B-5C5F-4673-8504-AF5D024BCEFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BFB5EA0B-5C5F-4673-8504-AF5D024BCEFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BFB5EA0B-5C5F-4673-8504-AF5D024BCEFC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
