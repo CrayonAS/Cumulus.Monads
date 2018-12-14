@@ -56,25 +56,27 @@ namespace Cumulus.Monads.Graph
 
                 var addedGroup = await client.Groups.Request().AddAsync(newGroup);
 
+                var owners = new List<User>();
+                var members = new List<User>();
 
                 if (request.Owners != null && request.Owners.Length > 0)
                 {
-                    var userIds = GetUserIds(client, request.Owners);
-                    if (userIds != null)
+                    owners = GetUsers(client, request.Owners);
+                    if (owners != null)
                     {
-                        newGroup.OwnersODataBind = userIds.Select(id => $"https://graph.microsoft.com/v1.0/users/{id}").ToArray();
-                        await AddGroupMemberOwner(userIds, client, addedGroup, true, log);
+                        newGroup.OwnersODataBind = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+                        await AddGroupMemberOwner(owners, client, addedGroup, true, log);
                     }
 
                 }
 
                 if (request.Members != null && request.Members.Length > 0)
                 {
-                    var userIds = GetUserIds(client, request.Members);
-                    if (userIds != null)
+                    members = GetUsers(client, request.Members);
+                    if (members != null)
                     {
-                        newGroup.MembersODataBind = userIds.Select(id => $"https://graph.microsoft.com/v1.0/users/{id}").ToArray();
-                        await AddGroupMemberOwner(userIds, client, addedGroup, false, log);
+                        newGroup.MembersODataBind = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+                        await AddGroupMemberOwner(members, client, addedGroup, false, log);
                     }
                 }
 
@@ -82,8 +84,9 @@ namespace Cumulus.Monads.Graph
                 {
                     GroupId = addedGroup.Id,
                     DisplayName = displayName,
-                    Mail = addedGroup.Mail
-
+                    Mail = addedGroup.Mail,
+                    Owners = owners.Select(user => user.Mail).ToArray(),
+                    Members = members.Select(user => user.Mail).ToArray(),
                 };
                 try
                 {
@@ -119,19 +122,19 @@ namespace Cumulus.Monads.Graph
 
         }
 
-        private static List<string> GetUserIds(GraphServiceClient graphClient, string[] userEmails)
+        private static List<User> GetUsers(GraphServiceClient graphClient, string[] userEmails)
         {
             return Task.Run(async () =>
              {
-                 var userIds = new List<string>();
+                 List<User> usersList = new List<User>();
                  var users = await graphClient.Users.Request().Top(999).GetAsync();
                  while (users.Count > 0)
                  {
-                     foreach (var u in users)
+                     foreach (var user in users)
                      {
-                         if (userEmails.Any(uc => string.Compare(u.UserPrincipalName, uc, true) == 0))
+                         if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
                          {
-                             userIds.Add(u.Id);
+                             usersList.Add(user);
                          }
                      }
 
@@ -145,42 +148,37 @@ namespace Cumulus.Monads.Graph
                      }
                  }
 
-                 return userIds;
+                 return usersList;
              }).GetAwaiter().GetResult();
         }
 
 
-        private static async Task AddGroupMemberOwner(List<string> userIds, GraphServiceClient graphClient, Group group, bool owner, TraceWriter log)
+        private static async Task AddGroupMemberOwner(List<User> users, GraphServiceClient graphClient, Group group, bool owner, TraceWriter log)
         {
-            foreach (var id in userIds)
+            foreach (var user in users)
             {
-                User user = (await graphClient.Users.Request().Filter($"id eq '{id}'").GetAsync()).FirstOrDefault();
-
-                if (user != null)
+                try
                 {
-                    try
+                    if (owner)
                     {
-                        if (owner)
-                        {
-                            log.Info($"Setting {user.Mail} as Owner for the group.");
-                            await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
-                        }
-                        else
-                        {
-                            log.Info($"Setting {user.Mail} as Member for the group.");
-                            await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
-                        }
+                        log.Info($"Setting {user.Mail} as Owner for the group.");
+                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
                     }
-                    catch (ServiceException ex)
+                    else
                     {
-                        if (ex.Error.Code == "Request_BadRequest" && ex.Error.Message.Contains("added object references already exist"))
-                        {
-                            // Skip any already existing member
-                        }
-                        else
-                        {
-                            throw ex;
-                        }
+                        log.Info($"Setting {user.Mail} as Member for the group.");
+                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
+                    }
+                }
+                catch (ServiceException ex)
+                {
+                    if (ex.Error.Code == "Request_BadRequest" && ex.Error.Message.Contains("added object references already exist"))
+                    {
+                        // Skip any already existing member
+                    }
+                    else
+                    {
+                        throw ex;
                     }
                 }
             }
@@ -337,6 +335,10 @@ namespace Cumulus.Monads.Graph
 
             [Display(Description = "Mail of the Office 365 Group")]
             public string Mail { get; set; }
+            [Display(Description = "Owners")]
+            public string[] Owners { get; set; }
+            [Display(Description = "Members")]
+            public string[] Members { get; set; }
         }
 
         class GroupExtended : Group
