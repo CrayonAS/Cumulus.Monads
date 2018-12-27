@@ -35,7 +35,7 @@ namespace Cumulus.Monads.Graph
                 dynamic team = new ExpandoObject();
                 var content = new StringContent(JsonConvert.SerializeObject(team), Encoding.UTF8, "application/json");
                 log.Info(JsonConvert.SerializeObject(team));
-                Uri uri = new Uri($"https://graph.microsoft.com/v1.0/groups/{request.GroupId}/team");
+                Uri uri = new Uri($"https://graph.microsoft.com/beta/groups/{request.GroupId}/team");
                 log.Info(uri.AbsoluteUri);
                 string bearerToken = await ConnectADAL.GetBearerToken();
                 HttpClient client = new HttpClient();
