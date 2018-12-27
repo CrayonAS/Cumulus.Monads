@@ -44,7 +44,7 @@ namespace Cumulus.Monads.Graph
 
                 var members = await GetUsers(request.Members);
                 var owners = await GetUsers(request.Owners);
-                var content = await GenerateStringContent(request);
+                var content = await GenerateStringContent(request, owners, members);
                 Uri uri = new Uri($"https://graph.microsoft.com/v1.0/groups");
                 string bearerToken = await ConnectADAL.GetBearerToken();
                 HttpClient client = new HttpClient();
@@ -85,11 +85,9 @@ namespace Cumulus.Monads.Graph
 
         }
 
-        private static async Task<StringContent> GenerateStringContent(CreateGroupRequest request)
+        private static async Task<StringContent> GenerateStringContent(CreateGroupRequest request, List<User> owners, List<User> members)
         {
             string mailNickName = await GetUniqueMailAlias(request);
-            var members = GetUsers(request.Members);
-            var owners = GetUsers(request.Owners);
             dynamic group = new ExpandoObject();
             group.displayName = GetDisplayName(request);
             group.description = request.Description;
@@ -104,6 +102,14 @@ namespace Cumulus.Monads.Graph
             group.securityEnabled = false;
             group.visibility = request.Public ? "Public" : "Private";
             group.groupTypes = new[] { "Unified" };
+            if (owners.Count > 0)
+            {
+                ((IDictionary<string, object>)group)["owners@odata.bind"] = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+            }
+            if (members.Count > 0)
+            {
+                ((IDictionary<string, object>)group)["members@odata.bind"] = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+            }
             return new StringContent(JsonConvert.SerializeObject(group), Encoding.UTF8, "application/json");
         }
 
