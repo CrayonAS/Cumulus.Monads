@@ -17,6 +17,10 @@ using Cumulus.Monads.Helpers;
 using Group = Microsoft.Graph.Group;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Dynamic;
+using System.Text;
+using System.Net.Http.Headers;
+using Newtonsoft.Json.Linq;
 
 namespace Cumulus.Monads.Graph
 {
@@ -37,86 +41,43 @@ namespace Cumulus.Monads.Graph
                 {
                     throw new ArgumentException("Parameter cannot be null", "Description");
                 }
-                string mailNickName = await GetUniqueMailAlias(request);
-                string displayName = GetDisplayName(request);
-                GraphServiceClient client = ConnectADAL.GetGraphClient(GraphEndpoint.Beta);
 
-
-                var newGroup = new GroupExtended
+                var members = await GetUsers(request.Members);
+                var owners = await GetUsers(request.Owners);
+                var content = await GenerateStringContent(request);
+                Uri uri = new Uri($"https://graph.microsoft.com/v1.0/groups");
+                string bearerToken = await ConnectADAL.GetBearerToken();
+                HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+                var response = await client.PostAsync(uri, content);
+                if (response.IsSuccessStatusCode)
                 {
-                    DisplayName = displayName,
-                    Description = GetDescription(request.Description, 1000),
-                    MailNickname = mailNickName,
-                    MailEnabled = true,
-                    SecurityEnabled = false,
-                    Visibility = request.Public ? "Public" : "Private",
-                    GroupTypes = new List<string> { "Unified" },
-                    Classification = request.Classification
-                };
-
-                var owners = new List<User>();
-                var members = new List<User>();
-
-                if (request.Owners != null && request.Owners.Length > 0)
-                {
-                    owners = GetUsers(client, request.Owners);
-                    newGroup.OwnersODataBind = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
-
-                }
-
-                if (request.Members != null && request.Members.Length > 0)
-                {
-                    members = GetUsers(client, request.Members);
-                    newGroup.MembersODataBind = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
-                }
-
-                var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-
-                if (owners.Count > 0)
-                {
-                    await AddGroupMemberOwner(owners, client, addedGroup, true, log);
-                }
-
-                if (members.Count > 0)
-                {
-                    await AddGroupMemberOwner(members, client, addedGroup, false, log);
-                }
-
-                var createGroupResponse = new CreateGroupResponse
-                {
-                    GroupId = addedGroup.Id,
-                    DisplayName = displayName,
-                    Mail = addedGroup.Mail,
-                    Owners = owners.Select(user => user.Mail).ToArray(),
-                    Members = members.Select(user => user.Mail).ToArray(),
-                };
-                try
-                {
-                    if (!request.AllowToAddGuests)
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    dynamic responseJson = JObject.Parse(responseBody);
+                    var createGroupResponse = new CreateGroupResponse
                     {
-                        var groupUnifiedGuestSetting = new GroupSetting()
-                        {
-                            DisplayName = "Group.Unified.Guest",
-                            TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
-                            Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = "false" } }
-                        };
-                        log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = false");
-                        await client.Groups[addedGroup.Id].Settings.Request().AddAsync(groupUnifiedGuestSetting);
-                    }
+                        DisplayName = responseJson.displayName,
+                        Mail = responseJson.mail,
+                        GroupId = responseJson.id
+                    };
+                    await SetGroupSettings(request, createGroupResponse, log);
+                    await SetGroupMembership(createGroupResponse, owners, members, log);
+                    return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
+                    });
                 }
-                catch (Exception e)
+                string responseMsg = await response.Content.ReadAsStringAsync();
+                dynamic errorJson = JsonConvert.DeserializeObject(responseMsg);
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
-                    log.Error($"Error setting AllowToAddGuests for group {addedGroup.Id}: {e.Message }\n\n{e.StackTrace}");
-                }
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new ObjectContent<CreateGroupResponse>(createGroupResponse, new JsonMediaTypeFormatter())
+                    Content = new ObjectContent<string>($"{errorJson.error.code}: {errorJson.error.message}", new JsonMediaTypeFormatter())
                 });
             }
             catch (Exception e)
             {
                 log.Error($"Error:  {e.Message }\n\n{e.StackTrace}");
-                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
                 {
                     Content = new ObjectContent<string>(e.Message, new JsonMediaTypeFormatter())
                 });
@@ -124,53 +85,68 @@ namespace Cumulus.Monads.Graph
 
         }
 
-        private static List<User> GetUsers(GraphServiceClient graphClient, string[] userEmails)
+        private static async Task<StringContent> GenerateStringContent(CreateGroupRequest request)
         {
-            return Task.Run(async () =>
+            string mailNickName = await GetUniqueMailAlias(request);
+            var members = GetUsers(request.Members);
+            var owners = GetUsers(request.Owners);
+            dynamic group = new ExpandoObject();
+            group.displayName = GetDisplayName(request);
+            group.description = request.Description;
+            group.mailNickname = mailNickName;
+            group.mailEnabled = true;
+            var resourceBehaviorOptions = new List<string>();
+            if (request.WelcomeEmailDisabled)
             {
-                List<User> usersList = new List<User>();
-                var users = await graphClient.Users.Request().Top(999).GetAsync();
-                while (users.Count > 0)
-                {
-                    foreach (var user in users)
-                    {
-                        if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
-                        {
-                            usersList.Add(user);
-                        }
-                    }
+                resourceBehaviorOptions.Add("WelcomeEmailDisabled");
+            }
+            group.resourceBehaviorOptions = resourceBehaviorOptions.ToArray();
+            group.securityEnabled = false;
+            group.visibility = request.Public ? "Public" : "Private";
+            group.groupTypes = new[] { "Unified" };
+            return new StringContent(JsonConvert.SerializeObject(group), Encoding.UTF8, "application/json");
+        }
 
-                    if (users.NextPageRequest != null)
+        private static async Task<List<User>> GetUsers(string[] userEmails)
+        {
+            List<User> usersList = new List<User>();
+            if (userEmails == null || userEmails.Length == 0)
+            {
+                return usersList;
+            }
+            GraphServiceClient client = ConnectADAL.GetGraphClient();
+            var users = await client.Users.Request().Top(999).GetAsync();
+            while (users.Count > 0)
+            {
+                foreach (var user in users)
+                {
+                    if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
                     {
-                        users = await users.NextPageRequest.GetAsync();
-                    }
-                    else
-                    {
-                        break;
+                        usersList.Add(user);
                     }
                 }
 
-                return usersList;
-            }).GetAwaiter().GetResult();
+                if (users.NextPageRequest != null)
+                {
+                    users = await users.NextPageRequest.GetAsync();
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return usersList;
         }
 
-
-        private static async Task AddGroupMemberOwner(List<User> users, GraphServiceClient graphClient, Group group, bool owner, TraceWriter log)
+        private static async Task SetGroupMembership(CreateGroupResponse response, List<User> owners, List<User> members, TraceWriter log)
         {
-            foreach (var user in users)
+            GraphServiceClient client = ConnectADAL.GetGraphClient();
+            foreach (var owner in owners)
             {
                 try
                 {
-                    if (owner)
-                    {
-                        log.Info($"Setting {user.Mail} as Owner for the group.");
-                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
-                    }
-                    else
-                    {
-                        log.Info($"Setting {user.Mail} as Member for the group.");
-                        await graphClient.Groups[group.Id].Owners.References.Request().AddAsync(user);
-                    }
+                    log.Info($"Setting {owner.Mail} as Owner for the group.");
+                    await client.Groups[response.GroupId].Owners.References.Request().AddAsync(owner);
                 }
                 catch (ServiceException ex)
                 {
@@ -183,6 +159,48 @@ namespace Cumulus.Monads.Graph
                         throw ex;
                     }
                 }
+            }
+            foreach (var member in members)
+            {
+                try
+                {
+                    log.Info($"Setting {member.Mail} as Member for the group.");
+                    await client.Groups[response.GroupId].Owners.References.Request().AddAsync(member);
+                }
+                catch (ServiceException ex)
+                {
+                    if (ex.Error.Code == "Request_BadRequest" && ex.Error.Message.Contains("added object references already exist"))
+                    {
+                        // Skip any already existing member
+                    }
+                    else
+                    {
+                        throw ex;
+                    }
+                }
+            }
+        }
+
+        private static async Task SetGroupSettings(CreateGroupRequest request, CreateGroupResponse response, TraceWriter log)
+        {
+            GraphServiceClient client = ConnectADAL.GetGraphClient();
+            try
+            {
+                if (!request.AllowToAddGuests)
+                {
+                    var groupUnifiedGuestSetting = new GroupSetting()
+                    {
+                        DisplayName = "Group.Unified.Guest",
+                        TemplateId = "08d542b9-071f-4e16-94b0-74abb372e3d9",
+                        Values = new List<SettingValue> { new SettingValue() { Name = "AllowToAddGuests", Value = "false" } }
+                    };
+                    log.Info($"Setting setting in Group.Unified.Guest (08d542b9-071f-4e16-94b0-74abb372e3d9), AllowToAddGuests = false");
+                    await client.Groups[response.GroupId].Settings.Request().AddAsync(groupUnifiedGuestSetting);
+                }
+            }
+            catch (Exception e)
+            {
+                log.Error($"Error setting AllowToAddGuests for group {response.GroupId}: {e.Message }\n\n{e.StackTrace}");
             }
         }
 
@@ -208,11 +226,6 @@ namespace Cumulus.Monads.Graph
             }
             displayName = $"{prefix}{prefixSeparator} {displayName} {suffix}".Trim();
             return displayName;
-        }
-
-        static string GetDescription(string description, int maxLength)
-        {
-            return description.Length > maxLength ? description.Substring(0, maxLength) : description;
         }
 
         static async Task<string> GetUniqueMailAlias(CreateGroupRequest request)
@@ -321,6 +334,9 @@ namespace Cumulus.Monads.Graph
 
             [Display(Description = "AllowToAddGuests")]
             public bool AllowToAddGuests { get; set; }
+
+            [Display(Description = "WelcomeEmailDisabled")]
+            public bool WelcomeEmailDisabled { get; set; }
             [Display(Description = "Owners")]
             public string[] Owners { get; set; }
             [Display(Description = "Members")]
@@ -337,10 +353,6 @@ namespace Cumulus.Monads.Graph
 
             [Display(Description = "Mail of the Office 365 Group")]
             public string Mail { get; set; }
-            [Display(Description = "Owners")]
-            public string[] Owners { get; set; }
-            [Display(Description = "Members")]
-            public string[] Members { get; set; }
         }
 
         class GroupExtended : Group
