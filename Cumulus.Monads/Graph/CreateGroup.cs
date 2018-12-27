@@ -54,30 +54,32 @@ namespace Cumulus.Monads.Graph
                     Classification = request.Classification
                 };
 
-                var addedGroup = await client.Groups.Request().AddAsync(newGroup);
-
                 var owners = new List<User>();
                 var members = new List<User>();
 
                 if (request.Owners != null && request.Owners.Length > 0)
                 {
                     owners = GetUsers(client, request.Owners);
-                    if (owners != null)
-                    {
-                        newGroup.OwnersODataBind = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
-                        await AddGroupMemberOwner(owners, client, addedGroup, true, log);
-                    }
+                    newGroup.OwnersODataBind = owners.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
 
                 }
 
                 if (request.Members != null && request.Members.Length > 0)
                 {
                     members = GetUsers(client, request.Members);
-                    if (members != null)
-                    {
-                        newGroup.MembersODataBind = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
-                        await AddGroupMemberOwner(members, client, addedGroup, false, log);
-                    }
+                    newGroup.MembersODataBind = members.Select(user => $"https://graph.microsoft.com/v1.0/users/{user.Id}").ToArray();
+                }
+
+                var addedGroup = await client.Groups.Request().AddAsync(newGroup);
+
+                if (owners.Count > 0)
+                {
+                    await AddGroupMemberOwner(owners, client, addedGroup, true, log);
+                }
+
+                if (members.Count > 0)
+                {
+                    await AddGroupMemberOwner(members, client, addedGroup, false, log);
                 }
 
                 var createGroupResponse = new CreateGroupResponse
@@ -125,31 +127,31 @@ namespace Cumulus.Monads.Graph
         private static List<User> GetUsers(GraphServiceClient graphClient, string[] userEmails)
         {
             return Task.Run(async () =>
-             {
-                 List<User> usersList = new List<User>();
-                 var users = await graphClient.Users.Request().Top(999).GetAsync();
-                 while (users.Count > 0)
-                 {
-                     foreach (var user in users)
-                     {
-                         if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
-                         {
-                             usersList.Add(user);
-                         }
-                     }
+            {
+                List<User> usersList = new List<User>();
+                var users = await graphClient.Users.Request().Top(999).GetAsync();
+                while (users.Count > 0)
+                {
+                    foreach (var user in users)
+                    {
+                        if (userEmails.Any(mail => string.Compare(user.UserPrincipalName, mail, true) == 0))
+                        {
+                            usersList.Add(user);
+                        }
+                    }
 
-                     if (users.NextPageRequest != null)
-                     {
-                         users = await users.NextPageRequest.GetAsync();
-                     }
-                     else
-                     {
-                         break;
-                     }
-                 }
+                    if (users.NextPageRequest != null)
+                    {
+                        users = await users.NextPageRequest.GetAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
 
-                 return usersList;
-             }).GetAwaiter().GetResult();
+                return usersList;
+            }).GetAwaiter().GetResult();
         }
 
 
