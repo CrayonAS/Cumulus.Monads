@@ -360,14 +360,5 @@ namespace Cumulus.Monads.Graph
             [Display(Description = "Mail of the Office 365 Group")]
             public string Mail { get; set; }
         }
-
-        class GroupExtended : Group
-        {
-            [JsonProperty("owners@odata.bind", NullValueHandling = NullValueHandling.Ignore)]
-            public string[] OwnersODataBind { get; set; }
-
-            [JsonProperty("members@odata.bind", NullValueHandling = NullValueHandling.Ignore)]
-            public string[] MembersODataBind { get; set; }
-        }
     }
 }
